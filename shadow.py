@@ -27,6 +27,7 @@ nursery_heap = nursery.nursery()
 parsed = false
 dbg_engine = ''
 pickle_file = ''
+mozjs_symbols_pickle = ''
 xul_symbols_pickle = ''
 
 try:
@@ -40,6 +41,7 @@ except ImportError:
         import pykd_engine as dbg
         dbg_engine = 'pykd'
         pickle_file = '%s/%s' % (tempfile.gettempdir(), 'jeheap.pkl')
+        mozjs_symbols_pickle = '%s\\pdb\\mozjs.pdb.pkl' % (os.path.dirname(os.path.abspath(__file__)))
         xul_symbols_pickle = '%s\\pdb\\xul.pdb.pkl' % (os.path.dirname(os.path.abspath(__file__)))
     except ImportError:
         try:
@@ -612,24 +614,24 @@ def help():
     print('[shadow]   jearenas                : dump info on jemalloc arenas')
     print('[shadow]   jerun <address>         : dump info on a single run')
     print('[shadow]   jeruns [-cs]            : dump info on jemalloc runs')
-    print('[shadow]                                 -c: current runs only')
-    print('[shadow]                    -s <size class>: runs for the given size class only')
+    print('                                         -c: current runs only')
+    print('                            -s <size class>: runs for the given size class only')
     print('[shadow]   jebins                  : dump info on jemalloc bins')
     print('[shadow]   jeregions <size class>  : dump all current regions of the given size class')
     print('[shadow]   jesearch [-cqs] <hex>   : search the heap for the given hex dword')
-    print('[shadow]                                 -c: current runs only')
-    print('[shadow]                                 -q: quick search (less details)')
-    print('[shadow]                    -s <size class>: regions of the given size only')
+    print('                                         -c: current runs only')
+    print('                                         -q: quick search (less details)')
+    print('                            -s <size class>: regions of the given size only')
     print('[shadow]   jeinfo <address>        : display all available details for an address')
     print('[shadow]   jedump [filename]       : dump all available jemalloc info to screen (default) or file')
     print('[shadow]   jeparse                 : parse jemalloc structures from memory')
     print('[shadow] Firefox-specific commands:')
     print('[shadow]   nursery                 : display info on the SpiderMonkey GC nursery')
     print('[shadow]   symbol [-vjdx] <size>   : display all Firefox symbols of the given size')
-    print('[shadow]                                 -v: only class symbols with vtable')
-    print('[shadow]                                 -j: only symbols from SpiderMonkey')
-    print('[shadow]                                 -d: only DOM symbols')
-    print('[shadow]                                 -x: only non-SpiderMonkey symbols')
+    print('                                         -v: only class symbols with vtable')
+    print('                                         -j: only symbols from mozjs (SpiderMonkey)')
+    print('                                         -d: only DOM symbols (from xul)')
+    print('                                         -x: only symbols from xul')
     print('[shadow]   pa <address> [<length>] : modify the ArrayObject\'s length (default new length 0x666)')
     print('[shadow] Generic commands:')
     print('[shadow]   version                 : output version number')
@@ -1003,28 +1005,25 @@ def find_address(addr, proc = none):
 def dump_symbol(size, has_vtable = false, from_mozjs = true, from_xul = false, from_dom = false):
     '''Display information on Firefox-specific symbols'''
     
+    global mozjs_symbols_pickle
     global xul_symbols_pickle
 
     dom_prefix = 'mozilla::dom::'
-    js_prefix = 'js::'
 
+    mozjs_symbols = []
     xul_symbols = []
 
-    pfd = open(xul_symbols_pickle, 'rb')
-    xul_symbols = pickle.load(pfd)
-    pfd.close()
-
     if from_mozjs == true:
+        pfd = open(mozjs_symbols_pickle, 'rb')
+        mozjs_symbols = pickle.load(pfd)
+        pfd.close()
+
         if has_vtable == false:
-            print('[shadow] searching for SpiderMonkey symbols of size %d' % (size))
+            print('[shadow] searching for mozjs symbols of size %d' % (size))
         else:
-            print('[shadow] searching for SpiderMonkey class symbols of size %d with vtable' \
-                            % (size))
+            print('[shadow] searching for mozjs class symbols of size %d with vtable' % (size))
 
-        for symbol in xul_symbols:
-            if not symbol.name.startswith(js_prefix):
-                continue
-
+        for symbol in mozjs_symbols:
             if size == symbol.size:
                 if has_vtable == true:
                     if symbol.kind == 'class' and symbol.has_vtable == true:
@@ -1033,22 +1032,22 @@ def dump_symbol(size, has_vtable = false, from_mozjs = true, from_xul = false, f
                     print('[shadow] %s' % (symbol))
 
     if from_xul == true or from_dom == true:
+        pfd = open(xul_symbols_pickle, 'rb')
+        xul_symbols = pickle.load(pfd)
+        pfd.close()
+
         if has_vtable == false:
             if from_dom == true:
-                print('[shadow] searching for DOM symbols of size %d' % (size))
+                print('[shadow] searching for DOM symbols (from xul) of size %d' % (size))
             else:
-                print('[shadow] searching for non-SpiderMonkey symbols of size %d' % (size))
+                print('[shadow] searching for xul symbols of size %d' % (size))
         else:
             if from_dom == true:
-                print('[shadow] searching for DOM class symbols of size %d with vtable' % (size))
+                print('[shadow] searching for DOM class symbols (from xul) of size %d with vtable' % (size))
             else:
-                print('[shadow] searching for non-SpiderMonkey class symbols of size %d with vtable' \
-                        % (size))
+                print('[shadow] searching for xul class symbols of size %d with vtable' % (size))
 
         for symbol in xul_symbols:
-            if symbol.name.startswith(js_prefix):
-                continue
-
             if size == symbol.size:
                 if has_vtable == true:
                     if symbol.kind == 'class' and symbol.has_vtable == true:

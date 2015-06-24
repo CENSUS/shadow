@@ -94,7 +94,7 @@ if __name__ == '__main__':
             sys.exit()
 
         shadow.dump_regions(size_class)
-    
+
     elif sys.argv[1] == 'pa':
         addr = 0
         new_len = 0x666
@@ -182,9 +182,9 @@ if __name__ == '__main__':
             print('[shadow] usage: symbol [-vjdx] <size>')
             print('[shadow] options:')
             print('[shadow]    -v  only class symbols with vtable')
-            print('[shadow]    -j  only symbols from SpiderMonkey')
-            print('[shadow]    -d  only DOM symbols')
-            print('[shadow]    -x  only non-SpiderMonkey symbols')
+            print('[shadow]    -j  only symbols from mozjs (SpiderMonkey)')
+            print('[shadow]    -d  only DOM symbols (from xul)')
+            print('[shadow]    -x  only symbols from xul')
             sys.exit()
 
         shadow.dump_symbol(size, has_vtable = vtable, from_mozjs = mozjs, \
