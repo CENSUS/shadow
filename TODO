@@ -1,0 +1,16 @@
+* Support for large and huge allocations
+
+* User-defined length of search bytes (jesearch command)
+
+* lldb_{driver,engine}.py for OS X and lldb
+
+* Test all new functionality on gdb/Linux x86 and x86-64
+
+* Search the jemalloc heap for specific Firefox structures/objects
+
+* Support for Windows x86-64 Firefox nightly builds
+
+* Support for the tenured GC heap
+
+* Data type discovery of memory contents
+
