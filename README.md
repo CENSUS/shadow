@@ -4,7 +4,7 @@ shadow :: De Mysteriis Dom Firefox
 A new, extended (and renamed ;) version of the Firefox/jemalloc heap
 exploitation swiss army knife.
 
-|shadow| has been tested with the following:
+**shadow** has been tested with the following:
 
 * Windows 8.1 x86-64
 * Windows 7 SP1 x86 and x86-64
@@ -13,9 +13,12 @@ exploitation swiss army knife.
 x86 (since Firefox stable is x86-only currently)
 * [pykd version 0.2.0.29](https://pykd.codeplex.com/releases/view/119220)
 (the latest stable version at the time of development)
-* Firefox versions (releases):
+* Many different Firefox releases, but extensively with the following:
+[31.7.0-esr](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.7.0esr/),
+[35.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/35.0.1/),
 [36.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0/),
-[36.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0.1/)
+[36.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0.1/),
+[38.0.5](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/38.0.5/).
 
 Installation
 ------------
@@ -23,7 +26,7 @@ Installation
 At first you need to setup WinDBG with [Mozilla's symbol server]
 (https://developer.mozilla.org/en/docs/Using_the_Mozilla_symbol_server).
 You also need to install [pykd version 0.2.0.29]
-(https://pykd.codeplex.com/releases/view/119220). Then copy the |shadow|
+(https://pykd.codeplex.com/releases/view/119220). Then copy the **shadow**
 directory you have cloned from GitHub to some path (e.g. C:\\tmp\\).
 
 Finally, from within WinDBG issue the following commands:
@@ -69,28 +72,34 @@ If you don't see the above help message you have done something wrong ;)
 Usage
 -----
 
-When you issue a jemalloc-specific command for the first time, |shadow| parses
+When you issue a jemalloc-specific command for the first time, **shadow** parses
 all jemalloc metadata it knows about and saves them to a Python pickle file.
 Subsequent commands use this pickle file instead of parsing the metadata from
 memory again in order to be faster.
 
 When you know that the state of jemalloc metadata has changed (for example when
 you have made some allocations or have triggered a garbage collection), use the
-|jeparse| command to re-parse the metadata and re-create the pickle file.
+**jeparse** command to re-parse the metadata and re-create the pickle file.
 
 Support for symbols
 -------------------
 
-Note: This feature is currently Windows-only!
+*Note: This feature is currently Windows-only!*
 
-The |symbol| command allows you to search for SpiderMonkey and DOM classes and
+The **symbol** command allows you to search for SpiderMonkey and DOM classes and
 structures of specific sizes. This is useful when you're trying to exploit
 use-after-free bugs, or when you want to position interesting victim objects to
 overwrite/corrupt.
 
-In the "aux" directory you can find a small PDB parsing utility named |symhex|.
-Run it on "xul.pdb" to generate the Python pickle file that |shadow| expects in
-the "pdb" directory.
+In the "aux" directory you can find a small PDB parsing utility named **symhex**.
+Run it on "xul.pdb" to generate the Python pickle file that **shadow** expects in
+the "pdb" directory (as *pdb/xul.pdb.pkl*). Before running **symhex** make sure
+you have registered "msdia90.dll"; for example on my Windows 8.1 x86-64
+installation I did that with *regsvr32 "c:\Program Files (x86)\Common
+Files\Microsoft Shared\VC\msdia90.dll"* from an Administrator prompt. You also
+need the "comtypes" Python module; install
+[pip](https://pip.pypa.io/en/latest/installing.html) and then do
+*pip install comtypes*.
 
 In order to get "xul.pdb" you have to setup WinDBG with [Mozilla's symbol server]
 (https://developer.mozilla.org/en/docs/Using_the_Mozilla_symbol_server).
@@ -98,9 +107,9 @@ In order to get "xul.pdb" you have to setup WinDBG with [Mozilla's symbol server
 Design
 ------
 
-I initially re-designed |unmask_jemalloc| with a modular design to support all
+I initially re-designed **unmask_jemalloc** with a modular design to support all
 three main debuggers and platforms (WinDBG, GDB and LLDB). I renamed the tool to
-|shadow| when I added Firefox/Windows/WinDBG-only features.
+**shadow** when I added Firefox/Windows/WinDBG-only features.
 
 The following is an overview of the new design (read the arrows as "imports"). The
 goal is, obviously, to have all debugger-depended code in the *_driver and *_engine
