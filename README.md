@@ -13,10 +13,9 @@ exploitation swiss army knife.
 x86 (since Firefox stable is x86-only currently)
 * [pykd version 0.2.0.29](https://pykd.codeplex.com/releases/view/119220)
 (the latest stable version at the time of development)
-* Many different Firefox releases, but extensively with the following:
+* Many different Firefox releases, but extensively with:
 [31.7.0-esr](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.7.0esr/),
 [35.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/35.0.1/),
-[36.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0/),
 [36.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0.1/),
 [38.0.5](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/38.0.5/).
 
@@ -86,18 +85,20 @@ Support for symbols
 
 *Note: This feature is currently Windows-only!*
 
-The **symbol** command allows you to search for SpiderMonkey and DOM classes and
-structures of specific sizes. This is useful when you're trying to exploit
+The **symbol** command allows you to search for SpiderMonkey and DOM classes (and
+structures) of specific sizes. This is useful when you're trying to exploit
 use-after-free bugs, or when you want to position interesting victim objects to
 overwrite/corrupt.
 
 In the "aux" directory you can find a small PDB parsing utility named **symhex**.
 Run it on "xul.pdb" to generate the Python pickle file that **shadow** expects in
-the "pdb" directory (as *pdb/xul.pdb.pkl*). Before running **symhex** make sure
+the "pdb" directory (as "pdb/xul.pdb.pkl"). Before running **symhex** make sure
 you have registered "msdia90.dll"; for example on my Windows 8.1 x86-64
-installation I did that with *regsvr32 "c:\Program Files (x86)\Common
-Files\Microsoft Shared\VC\msdia90.dll"* from an Administrator prompt. You also
-need the "comtypes" Python module; install
+installation I did that with
+
+*regsvr32 "c:\Program Files (x86)\Common Files\Microsoft Shared\VC\msdia90.dll"*
+
+from an Administrator prompt. You also need the "comtypes" Python module; install
 [pip](https://pip.pypa.io/en/latest/installing.html) and then do
 *pip install comtypes*.
 
@@ -112,7 +113,7 @@ three main debuggers and platforms (WinDBG, GDB and LLDB). I renamed the tool to
 **shadow** when I added Firefox/Windows/WinDBG-only features.
 
 The following is an overview of the new design (read the arrows as "imports"). The
-goal is, obviously, to have all debugger-depended code in the *_driver and *_engine
+goal is, obviously, to have all debugger-dependent code in the *_driver and *_engine
 modules.
 
     ---------------------------------------------------------------------------------------
