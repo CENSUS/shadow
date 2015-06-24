@@ -19,6 +19,8 @@ x86 (since Firefox stable is x86-only currently)
 [36.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0.1/),
 [38.0.5](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/38.0.5/).
 
+*Note: If you work with a Firefox version older than 36.0 use the mozjs branch!*
+
 Installation
 ------------
 
