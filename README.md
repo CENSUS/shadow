@@ -17,7 +17,8 @@ x86 (since Firefox stable is x86-only currently)
 [31.7.0-esr](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.7.0esr/),
 [35.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/35.0.1/),
 [36.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0.1/),
-[38.0.5](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/38.0.5/).
+[38.0.5](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/38.0.5/),
+[39.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/39.0/).
 
 *Note: If you work with a Firefox version older than 36.0 use the mozjs branch!*
 
