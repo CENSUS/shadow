@@ -11,14 +11,14 @@ exploitation swiss army knife.
 * [WinDBG 6.3.9600.17200]
 (https://msdn.microsoft.com/en-us/windows/hardware/hh852365.aspx)
 x86 (since Firefox stable is x86-only currently)
-* [pykd version 0.2.0.29](https://pykd.codeplex.com/releases/view/119220)
-(the latest stable version at the time of development)
+* [pykd version 0.3.0.27](https://pykd.codeplex.com/releases/view/616320)
 * Many different Firefox releases, but extensively with:
 [31.7.0-esr](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.7.0esr/),
 [35.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/35.0.1/),
 [36.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0.1/),
 [38.0.5](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/38.0.5/),
-[39.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/39.0/).
+[39.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/39.0/),
+[40.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/40.0/).
 
 *Note: If you work with a Firefox version older than 36.0 use the mozjs branch!*
 
@@ -27,8 +27,8 @@ Installation
 
 At first you need to setup WinDBG with [Mozilla's symbol server]
 (https://developer.mozilla.org/en/docs/Using_the_Mozilla_symbol_server).
-You also need to install [pykd version 0.2.0.29]
-(https://pykd.codeplex.com/releases/view/119220). Then copy the **shadow**
+You also need to install [pykd version 0.3.0.27]
+(https://pykd.codeplex.com/releases/view/616320). Then copy the **shadow**
 directory you have cloned from GitHub to some path (e.g. C:\\tmp\\).
 
 Finally, from within WinDBG issue the following commands:
