@@ -32,6 +32,7 @@ if __name__ == '__main__':
 
     elif sys.argv[1] == 'version':
         shadow.version()
+        shadow.firefox_version()
 
     elif sys.argv[1] == 'jedump':
         arg = ''
