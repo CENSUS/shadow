@@ -28,6 +28,7 @@ parsed = false
 dbg_engine = ''
 pickle_file = ''
 xul_symbols_pickle = ''
+xul_version = ''
 
 try:
     import gdb
@@ -40,7 +41,9 @@ except ImportError:
         import pykd_engine as dbg
         dbg_engine = 'pykd'
         pickle_file = '%s/%s' % (tempfile.gettempdir(), 'jeheap.pkl')
-        xul_symbols_pickle = '%s\\pdb\\xul.pdb.pkl' % (os.path.dirname(os.path.abspath(__file__)))
+        xul_version = dbg.get_xul_version();
+        xul_symbols_pickle = '%s\\pdb\\xul-%s.pdb.pkl' \
+            % (os.path.dirname(os.path.abspath(__file__)), xul_version)
     except ImportError:
         try:
             import lldb
