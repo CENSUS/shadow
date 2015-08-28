@@ -41,7 +41,7 @@ except ImportError:
         import pykd_engine as dbg
         dbg_engine = 'pykd'
         pickle_file = '%s/%s' % (tempfile.gettempdir(), 'jeheap.pkl')
-        xul_version = dbg.get_xul_version();
+        xul_version = dbg.get_xul_version()
         xul_symbols_pickle = '%s\\pdb\\xul-%s.pdb.pkl' \
             % (os.path.dirname(os.path.abspath(__file__)), xul_version)
     except ImportError:
