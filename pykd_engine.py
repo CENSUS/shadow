@@ -71,6 +71,10 @@ def buf_to_le(buf):
 def get_page_size():
     return pykd.pageSize()
 
+def get_xul_version():
+    version = pykd.dbgCommand('.printf "%ma", xul!gToolkitVersion')
+    return version
+
 def offsetof(struct_name, member_name):
     sval = pykd.dbgCommand('?? #FIELD_OFFSET(%s, %s)' \
             % (struct_name, member_name))
