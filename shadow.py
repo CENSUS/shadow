@@ -392,7 +392,13 @@ def parse_all_runs(proc = none):
     chunk_npages = jeheap.chunk_size >> 12
 
     # offset of bits in arena_chunk_map_t in double words
-    bitmap_offset = dbg.offsetof('arena_chunk_map_t', 'bits') / jeheap.DWORD_SIZE
+    if dbg_engine == 'pykd':
+        # this really speeds up parsing
+        bitmap_offset = \
+            dbg.offsetof('mozglue!arena_chunk_map_t', 'bits') / jeheap.DWORD_SIZE
+    else:
+        bitmap_offset = \
+            dbg.offsetof('arena_chunk_map_t', 'bits') / jeheap.DWORD_SIZE
 
     # number of double words occupied by an arena_chunk_map_t
     chunk_map_dwords = (bitmap_offset / jeheap.DWORD_SIZE) + 1
