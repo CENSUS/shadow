@@ -95,8 +95,8 @@ overwrite/corrupt.
 
 In the "aux" directory you can find a small PDB parsing utility named **symhex**.
 Run it on "xul.pdb" to generate the Python pickle file that **shadow** expects in
-the "pdb" directory (as "pdb/xul.pdb.pkl"). Before running **symhex** make sure
-you have registered "msdia90.dll"; for example on my Windows 8.1 x86-64
+the "pdb" directory (as "pdb/xul-*VERSION*.pdb.pkl"). Before running **symhex** make
+sure you have registered "msdia90.dll"; for example on my Windows 8.1 x86-64
 installation I did that with
 
 *regsvr32 "c:\Program Files (x86)\Common Files\Microsoft Shared\VC\msdia90.dll"*
