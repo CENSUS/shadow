@@ -93,10 +93,11 @@ use-after-free bugs, or when you want to position interesting victim objects to
 overwrite/corrupt.
 
 In the "aux" directory you can find a small PDB parsing utility named **symhex**.
-Run it on "xul.pdb" to generate the Python pickle file that **shadow** expects in
-the "pdb" directory (as "pdb/xul.pdb.pkl"). Before running **symhex** make sure
-you have registered "msdia90.dll"; for example on my Windows 8.1 x86-64
-installation I did that with
+Run it on "xul.pdb" and "mozjs.pdb" to generate the Python pickle files that
+**shadow** expects in the "pdb" directory (as "pdb/xul-*VERSION*.pdb.pkl"
+and "pdb/mozjs-*VERSION*.pdb.pkl"). Before running **symhex** make sure you have
+registered "msdia90.dll"; for example on my Windows 8.1 x86-64 installation I did
+that with
 
 *regsvr32 "c:\Program Files (x86)\Common Files\Microsoft Shared\VC\msdia90.dll"*
 
@@ -104,7 +105,8 @@ from an Administrator prompt. You also need the "comtypes" Python module; instal
 [pip](https://pip.pypa.io/en/latest/installing.html) and then do
 *pip install comtypes*.
 
-In order to get "xul.pdb" you have to setup WinDBG with [Mozilla's symbol server]
+In order to get "xul.pdb" and "mozjs.pdb" you have to setup WinDBG with
+[Mozilla's symbol server]
 (https://developer.mozilla.org/en/docs/Using_the_Mozilla_symbol_server).
 
 Design

@@ -29,6 +29,8 @@ dbg_engine = ''
 pickle_file = ''
 mozjs_symbols_pickle = ''
 xul_symbols_pickle = ''
+xul_version = ''
+mozjs_version = ''
 
 try:
     import gdb
@@ -41,8 +43,11 @@ except ImportError:
         import pykd_engine as dbg
         dbg_engine = 'pykd'
         pickle_file = '%s/%s' % (tempfile.gettempdir(), 'jeheap.pkl')
-        mozjs_symbols_pickle = '%s\\pdb\\mozjs.pdb.pkl' % (os.path.dirname(os.path.abspath(__file__)))
-        xul_symbols_pickle = '%s\\pdb\\xul.pdb.pkl' % (os.path.dirname(os.path.abspath(__file__)))
+        xul_version = mozjs_version = dbg.get_xul_version()
+        mozjs_symbols_pickle = '%s\\pdb\\mozjs-%s.pdb.pkl' % \
+            (os.path.dirname(os.path.abspath(__file__)), mozjs_version)
+        xul_symbols_pickle = '%s\\pdb\\xul-%s.pdb.pkl' % \
+            (os.path.dirname(os.path.abspath(__file__)), xul_version)
     except ImportError:
         try:
             import lldb

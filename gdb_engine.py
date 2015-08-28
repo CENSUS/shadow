@@ -76,6 +76,9 @@ def buf_to_le(buf):
 def get_page_size():
     return resource.getpagesize()
 
+def get_xul_version():
+    return gdb.parse_and_eval('gToolkitVersion')
+
 def offsetof(struct_name, member_name):
     expr = '(size_t)&(((%s *)0)->%s) - (size_t)((%s *)0)' % \
         (struct_name, member_name, struct_name)
