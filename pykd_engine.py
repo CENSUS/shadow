@@ -72,7 +72,7 @@ def get_page_size():
     return pykd.pageSize()
 
 def get_xul_version():
-    version = pykd.dbgCommand('.printf "%ma", xul!gToolkitVersion')
+    version = pykd.loadCStr(pykd.module('xul').offset('gToolkitVersion'))
     return version
 
 def offsetof(struct_name, member_name):
