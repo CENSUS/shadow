@@ -85,7 +85,7 @@ def offsetof(struct_name, member_name):
     return pykd.typeInfo(struct_name).fieldOffset(member_name)
 
 def sizeof(type_name):
-    return to_int(pykd.dbgCommand('?? sizeof(%s)' % (type_name)))
+    return pykd.typeInfo(type_name).size()
 
 def get_value(symbol):
     mozglue = pykd.module('mozglue')
