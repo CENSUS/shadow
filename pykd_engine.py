@@ -76,15 +76,7 @@ def get_xul_version():
     return version
 
 def offsetof(struct_name, member_name):
-    sval = pykd.dbgCommand('?? #FIELD_OFFSET(%s, %s)' \
-            % (struct_name, member_name))
-
-    if sval.startswith('long 0n'):
-        return int(sval[len('long 0n'):])
-    elif sval.startswith('long 0x'):
-        return int(sval[len('long 0x'):], 16)
-    else:
-        return int(sval)
+    return pykd.typeInfo(struct_name).fieldOffset(member_name)
 
 def sizeof(type_name):
     return to_int(pykd.dbgCommand('?? sizeof(%s)' % (type_name)))
