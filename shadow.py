@@ -654,7 +654,7 @@ def firefox_version():
     '''Output Firefox's version we are attached to'''
 
     global xul_version
-    print('[shadow] Firefox v%s' % (xul_version))
+    print('[shadow] Firefox v%s (%s)' % (xul_version, dbg.get_arch()))
 
 def dump_all(filename, dump_to_screen = true, proc = none):
     '''Dump all available jemalloc info to screen (default) or to a file'''

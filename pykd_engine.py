@@ -75,6 +75,12 @@ def get_xul_version():
     version = pykd.loadCStr(pykd.module('xul').offset('gToolkitVersion'))
     return version
 
+def get_arch():
+    if pykd.is64bitSystem():
+        return 'x86-64'
+
+    return 'x86'
+
 def offsetof(struct_name, member_name):
     return pykd.typeInfo(struct_name).fieldOffset(member_name)
 
