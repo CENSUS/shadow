@@ -615,7 +615,8 @@ def help():
     '''Details about the commands provided by shadow'''
 
     print('\n[shadow] De Mysteriis Dom Firefox')
-    print('[shadow] %s\n' % (VERSION))
+    print('[shadow] shadow %s' % (VERSION))
+    print('[shadow] Firefox v%s (%s)\n' % (xul_version, dbg.get_arch()))
     print('[shadow] jemalloc-specific commands:')
     print('[shadow]   jechunks                : dump info on all available chunks')
     print('[shadow]   jearenas                : dump info on jemalloc arenas')
