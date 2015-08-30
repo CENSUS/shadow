@@ -42,6 +42,8 @@ chunk_arena_expr = '((mozglue!arena_chunk_t *)0x%x)->arena'
 # windbg expressions for parsing nursery data
 nursery_expr = 'xul!nsXPConnect::gSelf->mRuntime->mJSRuntime->gc.nursery'
 
+# XXX: this function is getting complicated; needs to be re-written with
+#      pykd's typed memory access features
 def to_int(val):
     sval = str(val)
     start = sval.find('0x')
@@ -50,14 +52,18 @@ def to_int(val):
         end = sval.find('\n')
         
         if end == -1:
-            return int(sval[start:], 16)
+            return int(sval[start:].replace('`', ''), 16)
         else:
-            return int(sval[start:end], 16)
-        
+            return int(sval[start:end].replace('`', ''), 16)
+    
     elif sval.startswith('unsigned int'):
-        return int(sval[len('unsigned int'):])
+        if sval.startswith('unsigned int64'):
+            return int(sval[len('unsigned int64'):])
+        else:
+            return int(sval[len('unsigned int'):])
+    
     else:
-        return int(sval)
+        return int(sval.replace('`', ''))
 
 def buf_to_le(buf):
     # this function is from seanhn's tcmalloc_gdb
