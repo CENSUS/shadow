@@ -544,7 +544,9 @@ def parse_chunks():
         if dbg_engine == 'gdb':
             expr = dbg.chunk_radix_expr % (child_cnt, dw_fmt, node)
         elif dbg_engine == 'pykd':
-            child_cnt = child_cnt / 6 # XXX: is this correct on 64-bits?
+            if dbg.get_arch() == 'x86':
+                child_cnt = child_cnt / 6
+
             expr = dbg.chunk_radix_expr % (node, child_cnt)
         else: # lldb
             expr = ''
