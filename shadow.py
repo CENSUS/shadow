@@ -632,6 +632,7 @@ def help():
     print('[shadow]                                 -c: current runs only')
     print('[shadow]                                 -q: quick search (less details)')
     print('[shadow]                    -s <size class>: regions of the given size only')
+    print('[shadow]                                 -f: search for filled region holes')
     print('[shadow]   jeinfo <address>        : display all available details for an address')
     print('[shadow]   jedump [filename]       : dump all available jemalloc info to screen (default) or file')
     print('[shadow]   jeparse                 : parse jemalloc structures from memory')
@@ -658,6 +659,20 @@ def firefox_version():
 
     global xul_version
     print('[shadow] Firefox v%s (%s)' % (xul_version, dbg.get_arch()))
+
+def show_filled_holes():
+    print('[shadow] searching for filled holes (SVGImageElement/ArrayObject specific)')
+
+    try:
+        out = dbg.execute(dbg.filled_holes_expr)
+        out_len = len(out)
+        if out_len != 0:
+            print(out)
+    except:
+        print('[shadow] arrangement pattern not found')
+
+    if out_len == 0:
+        print('[shadow] arrangement pattern not found')
 
 def dump_all(filename, dump_to_screen = true, proc = none):
     '''Dump all available jemalloc info to screen (default) or to a file'''

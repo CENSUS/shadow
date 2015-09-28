@@ -42,6 +42,9 @@ chunk_arena_expr = '((mozglue!arena_chunk_t *)0x%x)->arena'
 # windbg expressions for parsing nursery data
 nursery_expr = 'xul!nsXPConnect::gSelf->mRuntime->mJSRuntime->gc.nursery'
 
+# filled holes expression (specific to SVGImageElement/ArrayObject arrangements)
+filled_holes_expr = 's 0x0 l?0xffffffff 06 01 00 06 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 1e 00 00 00 1e 00 00 00 1e 00 00 00'
+
 # XXX: this function is getting complicated; needs to be re-written with
 #      pykd's typed memory access features
 def to_int(val):
