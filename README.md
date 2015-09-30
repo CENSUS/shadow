@@ -27,8 +27,8 @@ Installation
 
 At first you need to setup WinDBG with [Mozilla's symbol server]
 (https://developer.mozilla.org/en/docs/Using_the_Mozilla_symbol_server).
-You also need to install [pykd version 0.3.0.27]
-(https://pykd.codeplex.com/releases/view/616320). Then copy the **shadow**
+You also need to install [pykd version 0.3.0.30]
+(https://pykd.codeplex.com/releases/view/617503). Then copy the **shadow**
 directory you have cloned from GitHub to some path (e.g. *C:\\tmp\\*).
 
 I have also added an example WinDBG initialization script at
