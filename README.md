@@ -29,7 +29,11 @@ At first you need to setup WinDBG with [Mozilla's symbol server]
 (https://developer.mozilla.org/en/docs/Using_the_Mozilla_symbol_server).
 You also need to install [pykd version 0.3.0.27]
 (https://pykd.codeplex.com/releases/view/616320). Then copy the **shadow**
-directory you have cloned from GitHub to some path (e.g. C:\\tmp\\).
+directory you have cloned from GitHub to some path (e.g. *C:\\tmp\\*).
+
+I have also added an example WinDBG initialization script at
+"aux/windbg-init.cmd". Place it at *C:\\tmp\\* and start WinDBG with
+*windbg.exe -c "$$>< C:\tmp\windbg-init.cmd"*.
 
 Finally, from within WinDBG issue the following commands:
 
