@@ -17,9 +17,6 @@ none = None
 if __name__ == '__main__':
     argc = len(sys.argv)
 
-    # don't remove this (still required?)
-    tmp = shadow.pykd.dbgCommand('?? mozglue!arenas[0]')
-
     if argc == 1:
         shadow.help()
         sys.exit()
@@ -228,7 +225,7 @@ if __name__ == '__main__':
             if filled_holes == true:
                 sys.exit()
 
-            print('[shadow] usage: jesearch [-cqsf] <hex dword>')
+            print('[shadow] usage: jesearch [-cfqs] <hex dword>')
             print('[shadow] options:')
             print('[shadow]    -c           search current runs only')
             print('[shadow]    -q           quick search')

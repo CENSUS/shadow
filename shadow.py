@@ -628,7 +628,7 @@ def help():
     print('[shadow]                    -s <size class>: runs for the given size class only')
     print('[shadow]   jebins                  : dump info on jemalloc bins')
     print('[shadow]   jeregions <size class>  : dump all current regions of the given size class')
-    print('[shadow]   jesearch [-cqs] <hex>   : search the heap for the given hex dword')
+    print('[shadow]   jesearch [-cfqs] <hex>  : search the heap for the given hex dword')
     print('[shadow]                                 -c: current runs only')
     print('[shadow]                                 -q: quick search (less details)')
     print('[shadow]                    -s <size class>: regions of the given size only')
