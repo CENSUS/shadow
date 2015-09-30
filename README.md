@@ -11,7 +11,7 @@ exploitation swiss army knife.
 * [WinDBG 6.3.9600.17200]
 (https://msdn.microsoft.com/en-us/windows/hardware/hh852365.aspx)
 x86 (since Firefox stable is x86-only currently)
-* [pykd version 0.3.0.27](https://pykd.codeplex.com/releases/view/616320)
+* [pykd version 0.3.0.30](https://pykd.codeplex.com/releases/view/617503)
 * Many different Firefox releases, but extensively with:
 [31.7.0-esr](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.7.0esr/),
 [35.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/35.0.1/),
@@ -49,10 +49,11 @@ Finally, from within WinDBG issue the following commands:
 [shadow]                    -s <size class>: runs for the given size class only
 [shadow]   jebins                  : dump info on jemalloc bins
 [shadow]   jeregions <size class>  : dump all current regions of the given size class
-[shadow]   jesearch [-cqs] <hex>   : search the heap for the given hex dword
+[shadow]   jesearch [-cfqs] <hex>  : search the heap for the given hex dword
 [shadow]                                 -c: current runs only
 [shadow]                                 -q: quick search (less details)
 [shadow]                    -s <size class>: regions of the given size only
+[shadow]                                 -f: search for filled region holes')
 [shadow]   jeinfo <address>        : display all available details for an address
 [shadow]   jedump [filename]       : dump all available jemalloc info to screen (default) or file
 [shadow]   jeparse                 : parse jemalloc structures from memory
