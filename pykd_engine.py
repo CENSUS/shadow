@@ -43,7 +43,7 @@ chunk_arena_expr = '((mozglue!arena_chunk_t *)0x%x)->arena'
 nursery_expr = 'xul!nsXPConnect::gSelf->mRuntime->mJSRuntime->gc.nursery'
 
 # filled holes expression (specific to SVGImageElement/ArrayObject arrangements)
-filled_holes_expr = 's 0x0 l?0xffffffff 06 01 00 06 01 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 1e 00 00 00 1e 00 00 00 1e 00 00 00'
+filled_holes_expr = 's 0x0 l?0xffffffff 06 01 00 06 01 00 00 00 00 00 00 00 00 00 e5 e5 00 00 00 00 1e 00 00 00 1e 00 00 00 1e 00 00 00'
 
 # XXX: this function is getting complicated; needs to be re-written with
 #      pykd's typed memory access features
