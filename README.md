@@ -57,7 +57,7 @@ Finally, from within WinDBG issue the following commands:
 [shadow]                                 -c: current runs only
 [shadow]                                 -q: quick search (less details)
 [shadow]                    -s <size class>: regions of the given size only
-[shadow]                                 -f: search for filled region holes')
+[shadow]                                 -f: search for filled region holes)
 [shadow]   jeinfo <address>        : display all available details for an address
 [shadow]   jedump [filename]       : dump all available jemalloc info to screen (default) or file
 [shadow]   jeparse                 : parse jemalloc structures from memory
