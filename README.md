@@ -34,7 +34,7 @@ You also need to install [pykd version 0.3.0.36]
 directory you have cloned from GitHub to some path (e.g. *C:\\tmp\\*).
 
 I have also added an example WinDBG initialization script at
-"aux/windbg-init.cmd". Place it at *C:\\tmp\\* and start WinDBG with
+"auxiliary/windbg-init.cmd". Place it at *C:\\tmp\\* and start WinDBG with
 *windbg.exe -c "$$>< C:\tmp\windbg-init.cmd"*.
 
 Finally, from within WinDBG issue the following commands:
@@ -100,7 +100,7 @@ structures) of specific sizes. This is useful when you're trying to exploit
 use-after-free bugs, or when you want to position interesting victim objects to
 overwrite/corrupt.
 
-In the "aux" directory you can find a small PDB parsing utility named **symhex**.
+In the "auxiliary" directory you can find a small PDB parsing utility named **symhex**.
 Run it on "xul.pdb" to generate the Python pickle file that **shadow** expects in
 the "pdb" directory (as "pdb/xul-*VERSION*.pdb.pkl"). Before running **symhex** make
 sure you have registered "msdia90.dll"; for example on my Windows 8.1 x86-64

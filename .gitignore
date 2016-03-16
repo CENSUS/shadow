@@ -1,4 +1,4 @@
 .DS_Store
 *.pyc
 __pycache__
-aux/test.py
+auxiliary/test.py
