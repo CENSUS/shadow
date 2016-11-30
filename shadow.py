@@ -1,4 +1,4 @@
-# shadow - De Mysteriis Dom Firefox
+# shadow - De Mysteriis Dom jemalloc
 
 import os
 import sys
@@ -616,7 +616,7 @@ def parse(proc = none):
 def help():
     '''Details about the commands provided by shadow'''
 
-    print('\n[shadow] De Mysteriis Dom Firefox')
+    print('\n[shadow] De Mysteriis Dom jemalloc')
     print('[shadow] shadow %s' % (VERSION))
     print('[shadow] Firefox v%s (%s)\n' % (xul_version, dbg.get_arch()))
     print('[shadow] jemalloc-specific commands:')

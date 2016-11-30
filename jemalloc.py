@@ -1,4 +1,4 @@
-# shadow - De Mysteriis Dom Firefox
+# shadow - De Mysteriis Dom jemalloc
 
 import sys
 import warnings

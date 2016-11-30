@@ -1,4 +1,4 @@
-# shadow - De Mysteriis Dom Firefox
+# shadow - De Mysteriis Dom jemalloc
 
 # This is an example of using |shadow| as a library.
 

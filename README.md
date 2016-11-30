@@ -1,10 +1,17 @@
-shadow :: De Mysteriis Dom Firefox
-==================================
+shadow :: De Mysteriis Dom jemalloc
+===================================
 
-A new, extended (and renamed ;) version of the Firefox/jemalloc heap
-exploitation swiss army knife.
+**shadow** is a jemalloc heap exploitation framework. It has been designed
+to be agnostic of the target application that uses jemalloc as its heap
+allocator (be it Firefox, Android's libc, FreeBSD's libc, standalone jemalloc,
+or whatever else). However, the current version (1.0b) has been tested only
+with Firefox (x86) on the Windows platform.
 
-**shadow** has been tested with the following:
+In the near future we will update **shadow** to support other targets, and
+in particular Android's libc malloc(3) implementation.
+
+The version of **shadow** you can find in this repository has been tested with
+the following:
 
 * Windows 8.1 x86-64
 * Windows 7 SP1 x86 and x86-64
@@ -12,15 +19,8 @@ exploitation swiss army knife.
 (https://msdn.microsoft.com/en-us/windows/hardware/hh852365.aspx)
 x86 (since Firefox stable is x86-only currently)
 * [pykd version 0.3.0.36](https://pykd.codeplex.com/releases/view/618995)
-* Many different Firefox releases, but extensively with:
-[31.7.0-esr](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/31.7.0esr/),
-[35.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/35.0.1/),
-[36.0.1](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/36.0.1/),
-[38.0.5](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/38.0.5/),
-[39.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/39.0/),
-[40.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/40.0/),
-[43.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/43.0/).
-[44.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/44.0/).
+* Many different Firefox releases, including the latest stable one
+([50.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/50.0/))
 
 *Note: If you work with a Firefox version older than 36.0 use the mozjs branch!*
 
@@ -43,7 +43,7 @@ Finally, from within WinDBG issue the following commands:
 !load pykd.pyd
 !py c:\\tmp\\shadow\\pykd_driver help
 
-[shadow] De Mysteriis Dom Firefox
+[shadow] De Mysteriis Dom jemalloc
 [shadow] v1.0b
 
 [shadow] jemalloc-specific commands:
