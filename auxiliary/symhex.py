@@ -4,7 +4,7 @@ import cPickle as pickle
 import comtypes
 import comtypes.client
 
-sys.path.append('..')
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
 import symbol
 
 false = False
