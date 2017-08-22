@@ -23,78 +23,6 @@ you have made some allocations or have triggered a garbage collection), use the
 **jeparse** command to re-parse the metadata and re-create the pickle file.
 
 
-## Design
-
-**unmask_jemalloc** was initially re-designed with a modular design to support
-all three main debuggers and platforms (WinDBG, GDB and LLDB). The tools was
-renamed to **shadow** when Firefox/Windows/WinDBG-only features were added.
-
-The following is an overview of the new design (read the arrows as
-"imports"). The goal is, obviously, to have all debugger-dependent code in the
-*_driver and *_engine modules.
-
-    ---------------------------------------------------------------------------------------
-
-                                                        debugger-required frontend (glue)
-
-
-    +------------+     +-------------+     +-------------+
-    | gdb_driver |     | lldb_driver |     | pykd_driver |
-    +------------+     +-------------+     +-------------+
-          ^                   ^                   ^
-          |                   |                   |
-    ------+-------------------+-------------------+----------------------------------------
-          |                   |                   |   
-          |                   +--------+          |
-          +------------------------    |    +-----+        core logic (debugger-agnostic)
-                                  |    |    |
-                                  |    |    |
-                               +-----------------+
-      +------+                 |                 |
-      |      |---------------> |      shadow     |<-----+
-      | util |        +------> |                 |      |
-      |      |        |        +-----------------+      |
-      +------+        |          ^  ^     ^    ^        |
-        | | |         |          |  |     |    |        |   +--------+
-        | | |   +-----+----------+  |     +----+--------+---| symbol |
-        | | |   |     |             |          |        |   +--------+
-      +-+ | |   |  +----------+     |          |        |   +---------+
-      |   | |   |  | jemalloc |     |          +--------+---| nursery |
-      |   | |   |  +----------+     |                   |   +---------+
-      |   | |   |   ^    ^   ^      |                   |
-      |   | |   |   |    |   |      |                   |
-      |   | |   |   |    |   +------+--------+          |
-      |   | |   |   |    |          |        |          |
-      |   | +---+---+----+----------+--------+-----+    |
-      |   |     |   |    |          |        |     |    |
-      |   +-----+---+----+----+     |        |     |    |
-      |         |   |    |    |     |        |     |    |
-    --+---------+---+----+----+-----+--------+-----+----+----------------------------------
-      |         |   |    |    |     |        |     |    |
-      |         |   |    |    |     |        |     |    |       debugger-dependent APIs
-      |         |   |    |    |     |        |     |    |
-      |         |   |    |    |     |        |     |    |
-      |         |   |    |    v     |        |     v    |
-      |  +------------+  |  +-------------+  |  +-------------+
-      +->| gdb_engine |  +--| lldb_engine |  +--| pykd_engine |
-         +------------+     +-------------+     +-------------+
-               ^                   ^                   ^
-               |                   |                   |
-           +---+         +---------+   +---------------+
-           |             |             |
-           |             |             |
-    -------+-------------+-------------+---------------------------------------------------
-           |             |             |
-           |             |             |                        debugger-provided backend
-           |             |             |
-           |             |             |
-        +-----+      +------+      +------+
-        | gdb |      | lldb |      | pykd |
-        +-----+      +------+      +------+
-
-    ---------------------------------------------------------------------------------------
-
-
 ## Android Installation
 
 First step is to install [pyrsistence](https://github.com/huku-/pyrsistence)
@@ -251,3 +179,74 @@ from an Administrator prompt. You also need the "comtypes" Python module; instal
 In order to get "xul.pdb" you have to setup WinDBG with [Mozilla's symbol server]
 (https://developer.mozilla.org/en/docs/Using_the_Mozilla_symbol_server).
 
+
+## Design
+
+**unmask_jemalloc** was initially re-designed with a modular design to support
+all three main debuggers and platforms (WinDBG, GDB and LLDB). The tools was
+renamed to **shadow** when Firefox/Windows/WinDBG-only features were added.
+
+The following is an overview of the new design (read the arrows as
+"imports"). The goal is, obviously, to have all debugger-dependent code in the
+*_driver and *_engine modules.
+
+    ---------------------------------------------------------------------------------------
+
+                                                        debugger-required frontend (glue)
+
+
+    +------------+     +-------------+     +-------------+
+    | gdb_driver |     | lldb_driver |     | pykd_driver |
+    +------------+     +-------------+     +-------------+
+          ^                   ^                   ^
+          |                   |                   |
+    ------+-------------------+-------------------+----------------------------------------
+          |                   |                   |   
+          |                   +--------+          |
+          +------------------------    |    +-----+        core logic (debugger-agnostic)
+                                  |    |    |
+                                  |    |    |
+                               +-----------------+
+      +------+                 |                 |
+      |      |---------------> |      shadow     |<-----+
+      | util |        +------> |                 |      |
+      |      |        |        +-----------------+      |
+      +------+        |          ^  ^     ^    ^        |
+        | | |         |          |  |     |    |        |   +--------+
+        | | |   +-----+----------+  |     +----+--------+---| symbol |
+        | | |   |     |             |          |        |   +--------+
+      +-+ | |   |  +----------+     |          |        |   +---------+
+      |   | |   |  | jemalloc |     |          +--------+---| nursery |
+      |   | |   |  +----------+     |                   |   +---------+
+      |   | |   |   ^    ^   ^      |                   |
+      |   | |   |   |    |   |      |                   |
+      |   | |   |   |    |   +------+--------+          |
+      |   | |   |   |    |          |        |          |
+      |   | +---+---+----+----------+--------+-----+    |
+      |   |     |   |    |          |        |     |    |
+      |   +-----+---+----+----+     |        |     |    |
+      |         |   |    |    |     |        |     |    |
+    --+---------+---+----+----+-----+--------+-----+----+----------------------------------
+      |         |   |    |    |     |        |     |    |
+      |         |   |    |    |     |        |     |    |       debugger-dependent APIs
+      |         |   |    |    |     |        |     |    |
+      |         |   |    |    |     |        |     |    |
+      |         |   |    |    v     |        |     v    |
+      |  +------------+  |  +-------------+  |  +-------------+
+      +->| gdb_engine |  +--| lldb_engine |  +--| pykd_engine |
+         +------------+     +-------------+     +-------------+
+               ^                   ^                   ^
+               |                   |                   |
+           +---+         +---------+   +---------------+
+           |             |             |
+           |             |             |
+    -------+-------------+-------------+---------------------------------------------------
+           |             |             |
+           |             |             |                        debugger-provided backend
+           |             |             |
+           |             |             |
+        +-----+      +------+      +------+
+        | gdb |      | lldb |      | pykd |
+        +-----+      +------+      +------+
+
+    ---------------------------------------------------------------------------------------
