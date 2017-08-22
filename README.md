@@ -10,6 +10,13 @@ the following targets:
 * Android 6 and 7 libc (ARM32 and ARM64)
 * Firefox (x86 and x86-64) on Windows and Linux
 
+Apart from the tool's source code, this repository also includes documentation on
+[setting up an Android userland debugging environment](https://github.com/CENSUS/shadow/blob/master/docs/android_quickstart.md)
+for utilizing shadow, a
+[quick overview of Android's jemalloc structures](https://github.com/CENSUS/shadow/blob/master/docs/android_heap.md)
+using shadow, and some notes on how double, unaligned and arbitrary free() bugs
+[behave on Android's jemalloc](https://github.com/CENSUS/shadow/blob/master/docs/android_free_attacks.md).
+
 
 ## Usage
 
