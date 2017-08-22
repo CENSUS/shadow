@@ -1,6 +1,9 @@
 Patroklos Argyroudis <argp@census-labs.com>
-    shadow author and unmask_jemalloc co-author
+    shadow author (Firefox) and unmask_jemalloc co-author
     
 Chariton Karamitas <huku@census-labs.com>
-    unmask_jemalloc co-author
+    unmask_jemalloc co-author and pyrsistence author
+
+Vasilis Tsaousoglou <vats@census-labs.com>
+    shadow author (Android) and 64-bit support
 

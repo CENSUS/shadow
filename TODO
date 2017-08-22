@@ -1,16 +1,19 @@
-* Support for large and huge allocations
+---[ New TODO list (Android-specific)
 
-* User-defined length of search bytes (jesearch command)
+* Test with Google's gdbclient binary.
 
-* lldb_{driver,engine}.py for OS X and lldb
+* Test with Android Studio.
+    + Port to lldb.
 
-* Test all new functionality on gdb/Linux x86 and x86-64
+* Support for huge allocations.
 
-* Search the jemalloc heap for specific Firefox structures/objects
+---[ Old TODO list (mostly Firefox-specific)
 
-* Support for Windows x86-64 Firefox nightly builds
+* lldb_{driver,engine}.py for macOS and lldb.
 
-* Support for the tenured GC heap
+* Search the jemalloc heap for specific Firefox structures/objects.
 
-* Data type discovery of memory contents
+* Support for the tenured GC heap.
+
+* Data type discovery of memory contents.
 

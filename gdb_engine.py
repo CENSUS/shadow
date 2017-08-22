@@ -1,46 +1,21 @@
 # shadow - De Mysteriis Dom jemalloc
 
-import sys
 import resource
-
-true = True
-false = False
-none = None
-
-sys.path.append('.')
 
 try:
     import gdb
 except ImportError:
-    print('[shadow] gdb_engine is only usable from within gdb')
-    sys.exit()
+    raise Exception('[shadow] gdb_engine is only usable from within gdb')
 
-address_separator = ':'
 
-# gdb expressions for parsing arenas
-arena_expr = 'arenas[%d]'
-arena_reg_size_expr = 'arenas[%d].bins[%d].reg_size'
-arena_reg0_offset_expr = 'arenas[%d].bins[%d].reg0_offset'
-arena_bin_info_reg_size_expr = 'arena_bin_info[%d].reg_size'
-arena_bin_info_nregs_expr = 'arena_bin_info[%d].nregs'
-arena_bin_info_run_size_expr = 'arena_bin_info[%d].run_size'
-arena_runcur_expr = 'arenas[%d].bins[%d].runcur'
-arena_bin_addr_expr = '&arenas[%d].bins[%d]'
+# cache
+cache_dword_size = None
+cache_page_size = None
+cache_int_size = None
+cache_offsets = {}
+cache_values= {}
+cache_sizes = {}
 
-# gdb expressions for parsing all runs and their regions
-chunk_map_expr = 'x/%d%sx ((arena_chunk_t *)%#x)->map'
-
-# gdb expressions for parsing current runs
-regs_mask_expr = 'x/%dbt arenas[%d].bins[%d].runcur.regs_mask'
-regs_mask_addr_expr = 'x/x ((arena_run_t *)%#x)->regs_mask'
-regs_mask_addr_bits_expr = 'x/%dbt %#x'
-
-# gdb expressions for parsing chunks
-chunk_rtree_root_expr = 'chunk_rtree.root'
-chunk_rtree_height_expr = 'chunk_rtree.height'
-chunk_rtree_level2bits_expr = 'chunk_rtree.level2bits[%d]'
-chunk_radix_expr = 'x/%d%sx %#x'
-chunk_arena_expr = '((arena_chunk_t *)%#x)->arena'
 
 def to_int(val):
     sval = str(val)
@@ -64,6 +39,7 @@ def to_int(val):
     else:
         return int(sval)
 
+
 def buf_to_le(buf):
     # this function is from seanhn's tcmalloc_gdb
     tmp = 0
@@ -73,36 +49,190 @@ def buf_to_le(buf):
 
     return tmp
 
+
+def buf_to_val(buf):
+    val = 0
+
+    for i in range(0, len(buf)):
+        val |= (buf[i] << i * 8)
+
+    return val
+
+
 def get_page_size():
-    return resource.getpagesize()
+    global cache_page_size
+
+    if not cache_page_size:
+        cache_page_size = resource.getpagesize()
+
+    return cache_page_size
+
 
 def get_xul_version():
     return gdb.parse_and_eval('gToolkitVersion')
 
+
 def get_arch():
-    # XXX
-    return 'x86'
+    # get the start of text
+    text_addr = None
+    for l in execute("info proc stat").split("\n"):
+        if l.startswith("Start of text:"):
+            text_addr = int(l.split(":")[1], 16)
+            break
+
+    # raise exception?
+    if text_addr is None:
+        return None
+
+    e_machine = read_memory(text_addr + 0x12 , 2)
+
+    if e_machine == 3:
+        return "x86"
+    if e_machine == 0x28:
+        return "ARM"
+    if e_machine == 0x3E:
+        return "x86-64"
+    if e_machine == 0xB7:
+        return "Aarch64"
+
+    # raise exception?
+    return None
+
+
+def get_dword_size():
+    global cache_dword_size
+    if not cache_dword_size:
+        arch = get_arch()
+        if arch in ["x86", "ARM"]:
+            cache_dword_size = 4
+        if arch in ["x86-64", "Aarch64"]:
+            cache_dword_size = 8
+    return cache_dword_size
+
+def int_size():
+    global cache_int_size
+    if not cache_int_size:
+        cache_int_size = 4
+    return cache_int_size
+
 
 def offsetof(struct_name, member_name):
-    expr = '(size_t)&(((%s *)0)->%s) - (size_t)((%s *)0)' % \
-        (struct_name, member_name, struct_name)
-        
-    return to_int(gdb.parse_and_eval(expr))
+    global cache_offsets
+    k = struct_name + "." + member_name
+    if k not in cache_offsets:
+        expr = '(size_t)&(((%s *)0)->%s) - (size_t)((%s *)0)' % \
+               (struct_name, member_name, struct_name)
+
+        cache_offsets[k] = to_int(gdb.parse_and_eval(expr))
+    return cache_offsets[k]
+
 
 def sizeof(type_name):
-    return to_int(gdb.parse_and_eval('sizeof(%s)' % (type_name)))
+    global cache_sizes
+    k = type_name
+    if k not in cache_sizes:
+        cache_sizes[k] = to_int(gdb.parse_and_eval('sizeof(%s)' % (type_name)))
+    return cache_sizes[k]
 
-def get_value(symbol):
-    return gdb.parse_and_eval(symbol)
+
+def get_value(symbol, ignore_cache=False):
+    global cache_values
+    k = symbol
+    # stripped libc gdb fix
+    if symbol in ['arenas', 'je_arenas', 'chunk_rtree',
+                  'g_thread_list', 'je_tcache_bin_info',
+                  'tcache_bin_info']:
+        # fuck gdb
+        symbol = '*((unsigned long int *) &%s)' % symbol
+
+    if ignore_cache:
+        return gdb.parse_and_eval(symbol)
+
+    if k not in cache_values:
+        cache_values[k] = gdb.parse_and_eval(symbol)
+    return cache_values[k]
+
+
+def addressof(symbol):
+    return get_value('&' + symbol)
+
 
 def eval_expr(expr):
     return gdb.parse_and_eval(expr)
 
-def execute(expr):
-    return gdb.execute(expr, to_string = true)
 
-def read_memory(addr, size, proc):
+def execute(expr):
+    return gdb.execute(expr, to_string = True)
+
+
+def read_memory(addr, size):
+    proc = gdb.selected_inferior()
     return buf_to_le(proc.read_memory(addr, size))
+
+
+def read_bytes(addr, size):
+    proc = gdb.selected_inferior()
+    return bytearray(proc.read_memory(addr, size))
+
+
+def read_bytearray(addr, size):
+    proc = gdb.selected_inferior()
+    return bytearray(proc.read_memory(addr, size))
+
+
+# todo: check endianess
+def read_dwords(addr, size):
+    proc = gdb.selected_inferior()
+
+    dword_size = get_dword_size()
+    ndwords = size * dword_size
+
+    bytearr = read_bytes(addr, ndwords)
+
+    dwords = []
+    for i in range(0, ndwords, dword_size):
+        dword = bytearr[i]
+        for j in range(1, dword_size):
+            dword += bytearr[i+j] << j * 8
+        dwords.append(dword)
+    return dwords
+
+
+def read_dword(addr):
+    return read_dwords(addr, 1)[0]
+
+
+def dword_from_buf(buf, off):
+    dword = 0
+
+    for i in range(0, get_dword_size()):
+        dword |= buf[off+i] << i * 8
+
+    return dword
+
+
+def int_from_buf(buf, off):
+    dword = 0
+
+    for i in range(0, int_size()):
+        dword |= buf[off+i] << i * 8
+
+    return dword
+
+
+def read_struct_member(buf, struct_name, member_name, size):
+    off = offsetof(struct_name, member_name)
+    val_bytes = buf[off:off+size]
+
+    if size > get_dword_size():
+        return val
+
+    val = 0
+    for i in range(0, size):
+        val |= (val_bytes[i] << i * 8)
+
+    return val
+
 
 def search(start_addr, end_addr, dword):
     search_expr = 'find 0x%x, 0x%x, 0x%s'
@@ -112,13 +242,43 @@ def search(start_addr, end_addr, dword):
         dword = dword[len('0x'):]
 
     search_str = search_expr % (start_addr, end_addr, dword)
-    out_str = gdb.execute(search_str, to_string = true)
+    out_str = gdb.execute(search_str, to_string = True)
     str_results = out_str.split('\n')
 
     for str_result in str_results:
         if str_result.startswith('0x'):
             results.append((str_result, start_addr))
-
     return results
 
-# EOF
+
+def modules_dict():
+    """
+    modules_dict[objfile] = (start, end)
+    """
+    modules_dict = {}
+
+    for ln in execute('info proc mappings').split('\n'):
+        # [start, end, size, offset, objfile]
+        l = ln.split()
+        # skip if objfile is missing
+        if len(l) < 4:
+            continue
+
+        # skip the first line
+        if l[0] == 'Start':
+            continue
+        #todo: filter out [stack], [vsyscall], etc?
+        if len(l) < 5:
+            objfile = l[0]
+        else:
+            objfile = l[4]
+            objfile = objfile.split("/")[-1]
+
+        start = int(l[0], 16)
+        end = int(l[1], 16)
+
+        if objfile not in modules_dict:
+            modules_dict[objfile] = [(start, end),]
+        else:
+            modules_dict[objfile].append((start, end))
+    return modules_dict
