@@ -176,8 +176,53 @@ Finally, from within WinDBG issue the following commands:
 !py c:\\tmp\\shadow\\pykd_driver help
 
 [shadow] De Mysteriis Dom jemalloc
-[shadow] v2.0
-...
+[shadow] shadow v2.0
+[shadow] Firefox v56.0a1 (x86-64)
+
+[shadow] jemalloc-specific commands:
+[shadow]   jechunks                : dump info on all available chunks
+[shadow]   jearenas                : dump info on jemalloc arenas
+[shadow]   jerun [-m] <address>    : dump info on a single run
+[shadow]                                 -m : map content preview to metadata
+[shadow]   jeruns [-cs]            : dump info on jemalloc runs
+[shadow]                                 -c : current runs only
+[shadow]                    -s <size class> : runs for the given size class only
+[shadow]   jebins                  : dump info on jemalloc bins
+[shadow]   jebininfo               : dump info on bin sizes 
+[shadow]   jesize2bin              : convert size to bin index
+[shadow]   jeregions <size class>  : dump all runs that host the regions of
+[shadow]                             the given size class
+[shadow]   jesearch [-cs] <hex>    : search the heap for the given hex dword
+[shadow]                                 -c : current runs only
+[shadow]                    -s <size class> : regions of the given size only
+[shadow]   jeinfo <address>        : display all available details for an address
+[shadow]   jedump [path]           : store the heap snapshot to the current
+[shadow]                             working directory or to the specified path
+[shadow]   jestore [path]          : jedump alias
+[shadow]   jetcaches               : dump info on all tcaches
+[shadow]   jetcache [-bs] <tid>    : dump info on single tcache
+[shadow]                    -b <bin index>  : info for the given bin index only
+[shadow]                    -s <size class> : info for the given size class only
+[shadow]   jeparse [-crv]           : parse jemalloc structures from memory
+[shadow]                   -c <config file> : jemalloc target config file
+[shadow]                                 -r : read content preview
+[shadow]                                 -v : produce debug.log
+[shadow] Firefox-specific (pykd only) commands:
+[shadow]   nursery                 : display info on the SpiderMonkey GC nursery
+[shadow]   symbol [-vjdx] <size>   : display all Firefox symbols of the given size
+[shadow]                                 -v : only class symbols with vtable
+[shadow]                                 -j : only symbols from SpiderMonkey
+[shadow]                                 -d : only DOM symbols
+[shadow]                                 -x : only non-SpiderMonkey symbols
+[shadow]   pa <address> [<length>] : modify the ArrayObject's length (default new length 0x666)
+[shadow] Android-specific commands:
+[shadow]   jefreecheck [-bm]                : display addresses that can be passed to free()
+[shadow]                     -b <bin index> : display addresses that will be freed to
+[shadow]                                      the tcache bin of <bin index>
+[shadow]                          -m <name> : only search this specific module
+[shadow] Generic commands:
+[shadow]   jeversion               : output version number
+[shadow]   jehelp                  : this help message
 ```
 
 If you don't see the above help message you have done something wrong ;)
