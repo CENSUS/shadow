@@ -88,7 +88,6 @@ the *jeparse* command, just start from the beginning.
 * Windows 8.1 and 10 x86-64
 * Windows 7 SP1 x86 and x86-64
 * Various versions of WinDBG
-* Firefox x86 and x86-64
 * [pykd version 0.3.2.8](https://pykd.codeplex.com/releases/view/631449)
 * Many different Firefox releases (both x86-64 and x86), including the latest
 stable one ([55.0](http://ftp.mozilla.org/pub/mozilla.org/firefox/releases/55.0/))
@@ -164,7 +163,7 @@ If you don't see the above help message you have done something wrong ;)
 
 ### Support for symbols
 
-*Note: This feature is currently Windows-only!*
+*Note: This feature is currently Firefox/Windows-only!*
 
 The **symbol** command allows you to search for SpiderMonkey and DOM classes (and
 structures) of specific sizes. This is useful when you're trying to exploit
