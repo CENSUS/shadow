@@ -41,7 +41,7 @@ You can view the heap's chunks by using the "jechunks" command:
 Chunks in Android have the following sizes:
 
 |          |  32-bit |   64-bit |
-|----------+---------+----------|
+|-------------------------------|
 | Android6 | 0x40000 |  0x40000 |
 | Android7 | 0x80000 | 0x200000 |
 
@@ -110,15 +110,15 @@ a small run is associated with exactly one region size class.
 
 That means that you can think of a small run as an array of regions:
 
-|----------|
-| region 0 |
-|----------|
-| region 1 |
-|----------|
-| ...      |
-|----------|
-| region N |
-|----------|
+    |----------|
+    | region 0 |
+    |----------|
+    | region 1 |
+    |----------|
+    | ...      |
+    |----------|
+    | region N |
+    |----------|
 
 You can view the layout of a small run by using the "jerun" command:
 

@@ -258,7 +258,7 @@ def parse(read_content_preview, config_path, do_debug_log=False):
                 print("         (%s)" % cfg_path)
             else:
                 print("[shadow] Could not detect Android version, try to use"
-                      "a configuration file.")
+                      " a configuration file.")
                 return
             update_dbg_cache_from_config(cfg_path)
 
@@ -327,12 +327,12 @@ def parse_general(jeheap):
             jeheap.nbins = jeheap.ntbins + jeheap.nsbins + jeheap.nqbins
 
     # third attempt
-    if dbg_engine == 'gdb':
-        try:
-            jeheap.nbins = int(dbg.execute('p __mallinfo_nbins()').split()[2])
-        except:
-            # print("[shadow] Using hardcoded number of bins.")
-            pass
+    # if dbg_engine == 'gdb':
+    #     try:
+    #         jeheap.nbins = int(dbg.execute('p __mallinfo_nbins()').split()[2])
+    #     except:
+    #         # print("[shadow] Using hardcoded number of bins.")
+    #         pass
 
     # fourth attempt - hardcoded values
     if not jeheap.nbins:
@@ -1730,7 +1730,6 @@ def dump_regions(size_class):
     print(ascii_table(table))
 
 
-
 def dump_run(addr, view_maps=False):
     global jeheap
 
@@ -1811,7 +1810,7 @@ def dump_run(addr, view_maps=False):
     else:
         table = [("*", "status", "address", "preview")]
 
-    data_fmt_str = "%" + ("0%d" % (jeheap.dword_size * 2)) + "x" # damn :(
+    data_fmt_str = "%" + ("0%d" % (jeheap.dword_size * 2)) + "x"
     for region in run.regions:
         if region.is_free:
             status = "free"
