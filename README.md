@@ -189,7 +189,7 @@ In order to get "xul.pdb" you have to setup WinDBG with [Mozilla's symbol server
 ## Design
 
 **unmask_jemalloc** was initially re-designed with a modular design to support
-all three main debuggers and platforms (WinDBG, GDB and LLDB). The tools was
+all three main debuggers and platforms (WinDBG, GDB and LLDB). The tool was
 renamed to **shadow** when Firefox/Windows/WinDBG-only features were added.
 
 The following is an overview of the new design (read the arrows as
