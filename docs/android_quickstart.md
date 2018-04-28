@@ -29,7 +29,7 @@ This is what we assume you have:
         1. git clone http://android.googlesource.com/toolchain/gdb
         2. cd ./gdb/gdb-7.11
         3. mkdir build64; cd build64
-        4. ../configure --program-prefix=aarch64-eabi-linux- --target=aarch64-eabi-linux --disable-werror
+        4. ../configure --program-prefix=aarch64-eabi-linux- --target=aarch64-eabi-linux --disable-werror --with-python
         5. make
         6. make install
 

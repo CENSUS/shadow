@@ -41,7 +41,7 @@ try:
     import gdb_engine as dbg
     dbg_engine = 'gdb'
     storage_path = '/tmp/shadow'
-    android_version = '7'
+    android_version = '8'
 except ImportError:
     try:
         import pykd
@@ -64,7 +64,7 @@ except ImportError:
             import lldb_engine as dbg
             dbg_engine = 'lldb'
             storage_path = '/tmp/shadow'
-            android_version = '7'
+            android_version = '8'
         except ImportError:
             pass
 
@@ -176,12 +176,10 @@ def has_symbols():
         return False
 
 
-
 debug_log_f = None
 debug_log = lambda x: None
 def _debug_log(s):
     debug_log_f.write(s + "\n")
-
 
 
 # parse functions
@@ -191,7 +189,6 @@ def parse(read_content_preview, config_path, do_debug_log=False):
     global debug_log_f
     global storage_path
     global android_version
-
 
     if do_debug_log:
         debug_log_p = os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -203,7 +200,9 @@ def parse(read_content_preview, config_path, do_debug_log=False):
 
     if config_path:
         print('[shadow] parsing configuration...')
-        if 'android7' in config_path:
+        if 'android8' in config_path:
+            android_version = '8'
+        elif 'android7' in config_path:
             android_version = '7'
         elif 'android6' in config_path:
             android_version = '6'
@@ -211,23 +210,40 @@ def parse(read_content_preview, config_path, do_debug_log=False):
     else:
         if is_standalone_variant() and not has_symbols():
             print("[shadow] Detecting Android version...")
-            chunksize = int_from_sym(['je_chunksize', 'chunksize'])
+            chunksize = int_from_sym(["je_chunksize", "chunksize"])
+            map_misc_offset = int_from_sym(["je_map_misc_offset"])
 
             shadow_path = os.path.dirname(os.path.realpath(__file__))
             cfg_path = os.path.join(shadow_path, "cfg")
 
-            # android 7 32bit
+            # android 7/8 32bit
             if chunksize == 0x80000:
-                android_version = '7'
-                cfg_path = os.path.join(cfg_path, "android7_32.cfg")
-                print("[shadow] Using Android 7 32 bit configuration.")
-                print("         (%s)" % cfg_path)
-            # android 7 64bit
+                # android 8 32 bit
+                if map_misc_offset == 0x230:
+                    android_version = '8'
+                    cfg_path = os.path.join(cfg_path, "android8_32.cfg")
+                    print("[shadow] Using Android 8 32 bit configuration.")
+                    print("         (%s)" % cfg_path)
+                # android 8 64 bit
+                elif map_misc_offset == 0x228:
+                    android_version = '7'
+                    cfg_path = os.path.join(cfg_path, "android7_32.cfg")
+                    print("[shadow] Using Android 7 32 bit configuration.")
+                    print("         (%s)" % cfg_path)
+            # android 7/8 64bit
             elif chunksize == 0x200000:
-                android_version = '7'
-                cfg_path = os.path.join(cfg_path, "android7_64.cfg")
-                print("[shadow] Using Android 7 64 bit configuration.")
-                print("         (%s)" % cfg_path)
+                # android 8 64bit
+                if map_misc_offset == 0x1010:
+                    android_version = '8'
+                    cfg_path = os.path.join(cfg_path, "android8_64.cfg")
+                    print("[shadow] Using Android 8 64 bit configuration.")
+                    print("         (%s)" % cfg_path)
+                # android 7 64bit
+                elif map_misc_offset == 0x1008:
+                    android_version = '7'
+                    cfg_path = os.path.join(cfg_path, "android7_64.cfg")
+                    print("[shadow] Using Android 7 64 bit configuration.")
+                    print("         (%s)" % cfg_path)
             # android 6 32bit
             elif chunksize == 0x40000 and dbg.get_dword_size() == 4:
                 android_version = '6'
@@ -242,7 +258,7 @@ def parse(read_content_preview, config_path, do_debug_log=False):
                 print("         (%s)" % cfg_path)
             else:
                 print("[shadow] Could not detect Android version, try to use"
-                      "a configuration file.")
+                      " a configuration file.")
                 return
             update_dbg_cache_from_config(cfg_path)
 
@@ -264,10 +280,10 @@ def parse(read_content_preview, config_path, do_debug_log=False):
         store_jeheap(path)
 
     # write current config
-    # p = os.path.join(storage_path, 'shadow.cfg')
-    # if not os.path.isdir(storage_path):
-    #     os.makedirs(storage_path)
-    # generate_config(p)
+    p = os.path.join(storage_path, 'shadow.cfg')
+    if not os.path.isdir(storage_path):
+        os.makedirs(storage_path)
+    generate_config(p)
 
     print('[shadow] structures parsed')
     print_timestamp()
@@ -311,12 +327,12 @@ def parse_general(jeheap):
             jeheap.nbins = jeheap.ntbins + jeheap.nsbins + jeheap.nqbins
 
     # third attempt
-    if dbg_engine == 'gdb':
-        try:
-            jeheap.nbins = int(dbg.execute('p __mallinfo_nbins()').split()[2])
-        except:
-            # print("[shadow] Using hardcoded number of bins.")
-            pass
+    # if dbg_engine == 'gdb':
+    #     try:
+    #         jeheap.nbins = int(dbg.execute('p __mallinfo_nbins()').split()[2])
+    #     except:
+    #         # print("[shadow] Using hardcoded number of bins.")
+    #         pass
 
     # fourth attempt - hardcoded values
     if not jeheap.nbins:
@@ -593,7 +609,7 @@ def parse_all_runs(jeheap, read_content_preview):
 
                     if android_version == '6':
                         offset = mapelm & ~flags_mask
-                    elif android_version == '7':
+                    elif android_version == '7' or android_version == '8':
                         # offset = (mapelm >> 13) << 12
                         offset = (mapelm & ~0x1FFF) >> 1
 
@@ -624,7 +640,7 @@ def parse_all_runs(jeheap, read_content_preview):
                     # decode the bin index
                     if android_version == '6':
                         binind = (mapelm & 0xFF0) >> 4
-                    elif android_version== '7':
+                    elif android_version== '7' or android_version == '8':
                         binind = (mapelm & 0x1FE0) >> 5
                     debug_log("      binind = 0x%x" % binind)
 
@@ -678,7 +694,7 @@ def parse_all_runs(jeheap, read_content_preview):
 
                     if android_version == '6':
                         size = mapelm & ~flags_mask
-                    elif android_version == '7':
+                    elif android_version == '7' or android_version == '8':
                         size = (mapelm & ~0x1FFF) >> 1
                     debug_log("      size = 0x%x" % size)
 
@@ -1046,7 +1062,7 @@ def parse_tcache(addr, mem, tid):
 
         stack_size = ncached_max * dword_size
 
-        if android_version == '7':
+        if android_version == '7' or android_version == '8':
             avail_off = avail - addr - (ncached_max * dword_size)
             stack_mem = mem[avail_off:avail_off+stack_size]
             stack = []
@@ -1120,7 +1136,7 @@ def jefreecheck_search(ptr):
     # print('[shadow] mapbits success')
     if android_version == '6':
         binind = (mapbits & 0xFF0) >> 4
-    elif android_version== '7':
+    elif android_version == '7' or android_version == '8':
         binind = (mapbits & 0x1FE0) >> 5
 
     # print('[shadow] fake binind = 0x%x' % binind)
@@ -1714,7 +1730,6 @@ def dump_regions(size_class):
     print(ascii_table(table))
 
 
-
 def dump_run(addr, view_maps=False):
     global jeheap
 
@@ -1795,7 +1810,7 @@ def dump_run(addr, view_maps=False):
     else:
         table = [("*", "status", "address", "preview")]
 
-    data_fmt_str = "%" + ("0%d" % (jeheap.dword_size * 2)) + "x" # damn :(
+    data_fmt_str = "%" + ("0%d" % (jeheap.dword_size * 2)) + "x"
     for region in run.regions:
         if region.is_free:
             status = "free"
