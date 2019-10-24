@@ -72,7 +72,27 @@ def get_xul_version():
     return gdb.parse_and_eval('gToolkitVersion')
 
 
+def get_arch_running():
+    arch = gdb.selected_frame().architecture().name()
+
+    if 'aarch64' == arch:
+        return 'Aarch64'
+    elif 'arm' in arch:
+        return 'ARM'
+    elif 'i386' == arch:
+        return 'x86'
+    elif 'x86-64' in arch:
+        return 'x86-64'
+
+
 def get_arch():
+    # try to use GDB's architecture API first. If the program is not running
+    # this will throw an exception but so will `execute("info proc start")`
+    try:
+        return get_arch_running()
+    except gdb.error as e:
+        pass
+
     # get the start of text
     text_addr = None
     for l in execute("info proc stat").split("\n"):
