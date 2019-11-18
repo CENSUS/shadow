@@ -7,7 +7,7 @@ allocator (be it Android's libc, Firefox, FreeBSD's libc, standalone jemalloc,
 or whatever else). The current version (2.0) has been tested extensively with
 the following targets:
 
-* Android 6 and 7 libc (ARM32 and ARM64)
+* Android 6-9 libc (ARM32 and ARM64)
 * Firefox (x86 and x86-64) on Windows and Linux
 
 Apart from the tool's source code, this repository also includes documentation on
@@ -40,7 +40,7 @@ On a rooted device do the following:
 ```
 host$ adb shell
 phone$ su root
-phone# ps
+phone# ps -e
 ```
 
 From the output of *ps* select a process, for example
@@ -69,6 +69,7 @@ host$ sudo make install
 Then on the host machine do:
 
 ```
+host$ adb forward tcp:5039 tcp:5039
 host$ aarch64-eabi-linux-gdb
 (gdb) target remote :5039
 (gdb) source /dir/with/shadow/gdb_driver.py
