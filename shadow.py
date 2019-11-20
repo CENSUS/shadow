@@ -15,6 +15,7 @@ except:
 
 sys.path.append('.')
 
+from dbg import dbg, dbg_engine
 import jemalloc
 import nursery
 import symbol
@@ -24,7 +25,6 @@ VERSION = 'v2.0'
 # globals
 jeheap = None
 arenas_addr = []
-dbg_engine = None
 
 # firefox globals
 xul_version = ''
@@ -34,39 +34,23 @@ nursery_heap = nursery.nursery()
 # android globals
 android_version = ''
 
-
-# detect debugger engine
-try:
-    import gdb
-    import gdb_engine as dbg
-    dbg_engine = 'gdb'
+if dbg_engine in ['gdb', 'lldb']:
     storage_path = '/tmp/shadow'
     android_version = '8'
-except ImportError:
-    try:
-        import pykd
-        import pykd_engine as dbg
-        if pykd.isWindbgExt():
-            dbg_engine = 'pykd'
-            storage_path = '%s\\shadow' % tempfile.gettempdir()
 
-            xul_version = dbg.get_xul_version()
+elif dbg_engine == 'pykd':
+    storage_path = '%s\\shadow' % tempfile.gettempdir()
+    xul_version = dbg.get_xul_version()
 
-            if dbg.get_arch() == 'x86':
-                xul_symbols_pickle = '%s\\pdb\\xul-%s.pdb.pkl' \
-                        % (os.path.dirname(os.path.abspath(__file__)), xul_version)
-            else:
-                xul_symbols_pickle = '%s\\pdb\\xul-%s-x64.pdb.pkl' \
-                        % (os.path.dirname(os.path.abspath(__file__)), xul_version)
-    except ImportError:
-        try:
-            import lldb
-            import lldb_engine as dbg
-            dbg_engine = 'lldb'
-            storage_path = '/tmp/shadow'
-            android_version = '8'
-        except ImportError:
-            pass
+    if dbg.get_arch() == 'x86':
+        xul_symbols_pickle = '%s\\pdb\\xul-%s.pdb.pkl' \
+                % (os.path.dirname(os.path.abspath(__file__)), xul_version)
+    else:
+        xul_symbols_pickle = '%s\\pdb\\xul-%s-x64.pdb.pkl' \
+                % (os.path.dirname(os.path.abspath(__file__)), xul_version)
+
+else:
+    raise Exception('Unknown debugger engine')
 
 
 def store_jeheap(path):
