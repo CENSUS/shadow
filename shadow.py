@@ -953,7 +953,6 @@ def parse_tcaches(jeheap):
                     break
 
         if not tsd_addr:
-            k = thread.tid
             jeheap.tcaches[k] = None
             elm_addr = thread.next
             continue
