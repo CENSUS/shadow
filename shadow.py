@@ -16,6 +16,7 @@ except:
 sys.path.append('.')
 
 from dbg import dbg, dbg_engine
+from pthread import pthread_internal, pthread_key_data
 import jemalloc
 import nursery
 import symbol
@@ -914,31 +915,19 @@ def parse_tcaches(jeheap):
 
 
     # tcache_size = 0x1C00
-    BIONIC_PTHREAD_KEY_COUNT = 141
     arenas_addr = [arena.addr for arena in jeheap.arenas]
-    data_off = dbg.offsetof("pthread_key_data_t" , "data")
-    pthread_internal_size = dbg.sizeof("pthread_internal_t")
-    key_data_off = dbg.offsetof('pthread_internal_t', 'key_data')
-    key_data_size = dbg.sizeof('pthread_key_data_t') * BIONIC_PTHREAD_KEY_COUNT
 
     # g_thread_list points to the first pthread_internal_t struct
     elm_addr = dbg.get_value("g_thread_list", True)
     while elm_addr != 0:
-        elm_mem = dbg.read_bytes(elm_addr, pthread_internal_size)
-        elm_tid = dbg.read_struct_member(elm_mem, "pthread_internal_t",
-                                         "tid", dbg.int_size())
-
+        thread = pthread_internal(elm_addr)
+        k = str(thread.tid)
 
         # key_data array
-        key_data = elm_mem[key_data_off:key_data_off + key_data_size]
+        key_data = thread.get_key_data()
 
         # transform to a list containing only the key_data->data
-        off = data_off
-        key_data_data = []
-        while off < len(key_data):
-            data = dbg.dword_from_buf(key_data, off)
-            key_data_data.append(data)
-            off += data_off
+        key_data_data = key_data.get_data_list()
 
         # search for jemalloc TSD(Thread Specific Data)
         tsd_addr = 0
@@ -964,10 +953,9 @@ def parse_tcaches(jeheap):
                     break
 
         if not tsd_addr:
-            k = str(elm_tid)
+            k = thread.tid
             jeheap.tcaches[k] = None
-            elm_addr = dbg.read_struct_member(elm_mem, "pthread_internal_t",
-                                              "next", dbg.get_dword_size())
+            elm_addr = thread.next
             continue
 
         arena_addr = 0
@@ -985,36 +973,29 @@ def parse_tcaches(jeheap):
                     continue
 
         if not arena_addr:
-            # print("[shadow] Could not find the arena for thread %d" % elm_tid)
-            k = str(elm_tid)
+            # print("[shadow] Could not find the arena for thread %d" % thread.tid)
             jeheap.tcaches[k] = None
-            elm_addr = dbg.read_struct_member(elm_mem, "pthread_internal_t",
-                                              "next", dbg.get_dword_size())
+            elm_addr = thread.next
             continue
 
         if not tcache_addr:
-            # print("[shadow] Could not find the tcache for thread %d" % elm_tid)
-            k = str(elm_tid)
+            # print("[shadow] Could not find the tcache for thread %d" % thread.tid)
             jeheap.tcaches[k] = None
-            elm_addr = dbg.read_struct_member(elm_mem, "pthread_internal_t",
-                                              "next", dbg.get_dword_size())
+            elm_addr = thread.next
             continue
 
 
         # add to jeheap tcaches dict
-        k = str(elm_tid)
         tcache_mem = dbg.read_bytes(tcache_addr, tcache_size)
-        jeheap.tcaches[k] = parse_tcache(tcache_addr, tcache_mem, elm_tid)
+        jeheap.tcaches[k] = parse_tcache(tcache_addr, tcache_mem, thread.tid)
 
         # match tid with arena
         for arena in jeheap.arenas:
             if arena_addr == arena.addr:
-                arena.tids.append(elm_tid)
+                arena.tids.append(thread.tid)
 
         # next
-        elm_addr = dbg.read_struct_member(elm_mem, "pthread_internal_t",
-                                          "next", dbg.get_dword_size())
-
+        elm_addr = thread.next
 
 
 def parse_tcache(addr, mem, tid):
