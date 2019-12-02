@@ -1,23 +1,26 @@
 # shadow - De Mysteriis Dom jemalloc
 
-dbg = None
-dbg_engine = 'unknown'
+def detect_dbg_engine():
+    try:
+        import gdb
+        import gdb_engine
+        return (gdb_engine, 'gdb')
+    except ImportError:
+        pass
 
-# detect debugger engine
-try:
-    import gdb
-    import gdb_engine as dbg
-    dbg_engine = 'gdb'
-except ImportError:
     try:
         import pykd
-        import pykd_engine as dbg
+        import pykd_engine
         if pykd.isWindbgExt():
-            dbg_engine = 'pykd'
+            return (pykd_engine, 'pykd')
     except ImportError:
-        try:
-            import lldb
-            import lldb_engine as dbg
-            dbg_engine = 'lldb'
-        except ImportError:
-            pass
+        pass
+
+    try:
+        import lldb
+        import lldb_engine
+        return (lldb_engine, 'lldb')
+    except ImportError:
+        pass
+
+dbg, dbg_engine = detect_dbg_engine()
