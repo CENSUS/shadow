@@ -1,5 +1,7 @@
 # shadow - De Mysteriis Dom jemalloc
 
+from dbg import dbg
+
 class jemalloc:
     def __init__(self, path=None):
         # memory organization
@@ -23,6 +25,7 @@ class jemalloc:
         # misc information
         self.dword_size = None
         self.standalone = None
+        self.version = None # This field is valid only when standalone is true
 
         # construct from snapshot
         if path:
@@ -64,12 +67,41 @@ class jemalloc:
 
 
 # small size class information
+class arena_bin_info:
+    '''
+    An object with information about an arena_bin_t object. In Firefox this
+    information is within the first arena. In Android versions <10, it is in an
+    arena_bin_info_t object.
+    '''
+    def __init__(self, data, struct_name):
+        int_size = dbg.int_size()
+        dword_size = dbg.get_dword_size()
+
+        self.reg_size = dbg.read_struct_member(data, struct_name,
+                                               "reg_size", dword_size)
+        self.nregs = dbg.read_struct_member(data, struct_name,
+                                            "nregs", int_size)
+        self.run_size = dbg.read_struct_member(data, struct_name,
+                                               "run_size", dword_size)
+        self.reg0_off = dbg.read_struct_member(data, struct_name,
+                                               "reg0_offset", int_size)
+
 class bin_info:
-        def __init__(self, reg_size, run_size, reg0_off, nregs):
-            self.reg_size = reg_size
-            self.run_size = run_size
-            self.reg0_off = reg0_off
-            self.nregs = nregs
+    '''
+    A bin_info_t object. This replaced arena_bin_info_t in Android 10.
+    '''
+    def __init__(self, data, struct_name):
+        assert struct_name == 'bin_info_t'
+
+        int_size = dbg.int_size()
+        dword_size = dbg.get_dword_size()
+
+        self.reg_size = dbg.read_struct_member(data, struct_name,
+                                               "reg_size", dword_size)
+        self.nregs = dbg.read_struct_member(data, struct_name,
+                                            "nregs", int_size)
+        self.slab_size = dbg.read_struct_member(data, struct_name,
+                                               "slab_size", dword_size)
 
 
 class tbin_info:

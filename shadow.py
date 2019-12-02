@@ -150,7 +150,25 @@ def is_standalone_variant():
         _ = dbg.addressof('je_arena_bin_info')
         return True
     except:
+        pass
+    try:
+        _ = dbg.addressof('je_bin_infos')
+        return True
+    except:
         return False
+
+
+def jemalloc_major_version():
+    try:
+        _ = dbg.addressof('je_arena_bin_info')
+        return 4
+    except:
+        pass
+    try:
+        _ = dbg.addressof('je_bin_infos')
+        return 5
+    except:
+        raise RuntimeError('Could not detect jemalloc major version')
 
 
 def has_symbols():
@@ -294,7 +312,9 @@ def parse_general(jeheap):
     arenas_addr = dbg.read_dwords(arenas_arr_addr, jeheap.narenas)
 
     if jeheap.standalone:
-        jeheap.chunk_size = int_from_sym(['chunksize', 'je_chunksize'])
+        jeheap.version = jemalloc_major_version()
+        if jeheap.version == 4:
+            jeheap.chunk_size = int_from_sym(['chunksize', 'je_chunksize'])
     # firefox
     else:
         jeheap.chunk_size = 1 << 20
@@ -312,12 +332,17 @@ def parse_general(jeheap):
             jeheap.nbins = jeheap.ntbins + jeheap.nsbins + jeheap.nqbins
 
     # third attempt
-    # if dbg_engine == 'gdb':
-    #     try:
-    #         jeheap.nbins = int(dbg.execute('p __mallinfo_nbins()').split()[2])
-    #     except:
-    #         # print("[shadow] Using hardcoded number of bins.")
-    #         pass
+    if dbg_engine == 'gdb':
+        try:
+            jeheap.nbins = int(dbg.execute('p __mallinfo_nbins()').split()[2])
+            print("[shadow] Got number of bins from __mallinfo_nbins")
+        except:
+            try:
+                jeheap.nbins = int(dbg.execute('p je_mallinfo_nbins()').split()[2])
+                print("[shadow] Got number of bins from je_mallinfo_nbins")
+            except:
+                print("[shadow] Using hardcoded number of bins.")
+                pass
 
     # fourth attempt - hardcoded values
     if not jeheap.nbins:
@@ -358,15 +383,23 @@ def parse_general(jeheap):
 
     # standalone: parse the global je_arena_bin_info array
     if jeheap.standalone:
-        info_addr = int(str(dbg.addressof('je_arena_bin_info')).split()[0], 16)
-        info_size = dbg.sizeof('arena_bin_info_t')
-        info_struct = "arena_bin_info_t"
+        if jeheap.version == 4:
+            info_addr = int(str(dbg.addressof('je_arena_bin_info')).split()[0], 16)
+            info_size = dbg.sizeof('arena_bin_info_t')
+            info_struct = 'arena_bin_info_t'
+            info_class = jemalloc.arena_bin_info
+        elif jeheap.version == 5:
+            info_addr = int(str(dbg.addressof('je_bin_infos')).split()[0], 16)
+            info_size = dbg.sizeof('bin_info_t')
+            info_struct = 'bin_info_t'
+            info_class = jemalloc.bin_info
 
     # firefox: parse the bins of arena[0]
     else:
         info_addr = arenas_addr[0] + dbg.offsetof('arena_t', 'bins')
         info_size = dbg.sizeof('arena_bin_t')
         info_struct = "arena_bin_t"
+        info_class = jeheap.arena_bin_info
 
     int_size = dbg.int_size()
     dword_size = dbg.get_dword_size()
@@ -377,22 +410,8 @@ def parse_general(jeheap):
                     for i in range(0, jeheap.nbins * info_size, info_size)]
 
     for buf in bin_info_mem:
-        reg_size = dbg.read_struct_member(buf, info_struct,
-                                          "reg_size", dword_size)
-
-        run_size = dbg.read_struct_member(buf, info_struct,
-                                          "run_size", dword_size)
-
-        reg0_off = dbg.read_struct_member(buf, info_struct,
-                                          "reg0_offset", int_size)
-
-        nregs = dbg.read_struct_member(buf, info_struct,
-                                       "nregs", int_size)
-
-        jeheap.bin_info.append(jemalloc.bin_info(reg_size,
-                                                 run_size,
-                                                 reg0_off,
-                                                 nregs))
+        info_unit = info_class(buf, info_struct)
+        jeheap.bin_info.append(info_unit)
 
     for name, range_list in dbg.modules_dict().items():
         jeheap.modules_dict[name] = range_list
