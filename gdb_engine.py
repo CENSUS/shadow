@@ -245,7 +245,7 @@ def read_struct_member(buf, struct_name, member_name, size):
     val_bytes = buf[off:off+size]
 
     if size > get_dword_size():
-        return val
+        return val_bytes
 
     val = 0
     for i in range(0, size):
