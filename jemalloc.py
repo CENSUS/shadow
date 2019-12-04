@@ -140,6 +140,20 @@ class region:
         self.data_map = data_map
 
 
+# memory organization structs for jemalloc version 5
+class extent:
+    def __init__(self, addr, e_addr, e_bits, qre_next, qre_prev,
+                 phn_prev, phn_next, phn_lchild):
+        self.addr = addr
+        self.e_addr = e_addr
+        self.e_bits = e_bits
+        self.qre_next = qre_next
+        self.qre_prev = qre_prev
+        self.phn_prev = phn_prev
+        self.phn_next = phn_next
+        self.phn_lchild = phn_lchild
+
+
 # backend allocator structs
 class arena:
     def __init__(self, addr, index, bins, chunks, tids):
@@ -155,6 +169,23 @@ class arena_bin:
         self.addr = addr
         self.index = index
         self.runcur = runcur
+
+
+# backend allocator struct for jemalloc version 5
+class arena5:
+    def __init__(self, addr, index, bins, tids):
+        self.addr = addr
+        self.index = index
+        self.bins = bins
+        self.tids = tids
+
+class bin5:
+    def __init__(self, addr, index, slabcur, slabs_nonfull, slabs_full):
+        self.addr = addr
+        self.index = index
+        self.slabcur = slabcur
+        self.slabs_nonfull = slabs_nonfull
+        self.slabs_full = slabs_full
 
 
 # thread cache structs

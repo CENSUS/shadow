@@ -536,6 +536,22 @@ def parse_run(jeheap, hdr_addr, addr, run_hdr, run_size, binind, read_content_pr
                         regs_mask, regions)
 
 
+# Parsing functions for jemalloc version 5
+def parse_arena5(address, index, nbins):
+
+    bin_size = dbg.sizeof('bin_t')
+
+    bins_addr = address + dbg.offset('arena_t', 'bins')
+    bins_mem = dbg.read_bytes(bins_addr, nbins * bin_size)
+    bins_mem = [bins_mem[z:z+bin_size]
+                for z in range(0, nbins * bin_size, bin_size)]
+
+    return jemalloc.arena5(address, index, [], [], [])
+
+def parse_bin5(address, index):
+    return jemalloc.bin5(address, index)
+
+
 # parse the metadata of all runs and their regions
 def parse_all_runs(jeheap, read_content_preview):
     global dbg_engine
@@ -748,7 +764,32 @@ def parse_all_runs(jeheap, read_content_preview):
 
 
 def parse_extents(jeheap):
+    debug_log('parse_extents()')
+
+    rtree_addr = int(str(dbg.addressof('je_extents_rtree')).split()[0], 16)
+    rtree_mem = dbg.read_bytes(rtree_addr, dbg.sizeof("rtree_t"))
+
     raise NotImplementedError('Must implement parsing of extent tree')
+
+
+def parse_extent(addr):
+    dword_size = dbg.get_dword_size()
+    mem = dbg.read_bytes(addr, dbg.sizeof('extent_t'))
+
+    e_bits = dbg.read_struct_member(mem, 'extent_t', 'e_bits', 8)
+    e_addr = dbg.read_struct_member(mem, 'extent_t', 'e_addr', dword_size)
+
+    # This code attempts to read the membbers of two anonymous structs. It will
+    # break if any change happens to these structs.
+    link_off = dbg.offsetof('extent_t', 'ql_link')
+    qre_next   = dbg.dword_from_buf(mem, link_off)
+    qre_prev   = dbg.dword_from_buf(mem, link_off + 1 * dword_size)
+    phn_prev   = dbg.dword_from_buf(mem, link_off + 2 * dword_size)
+    phn_next   = dbg.dword_from_buf(mem, link_off + 3 * dword_size)
+    phn_lchild = dbg.dword_from_buf(mem, link_off + 4 * dword_size)
+
+    return jemalloc.extent(addr, e_bits, e_addr, qre_prev, qre_next,
+                           phn_prev, phn_next, phn_lchild)
 
 
 # parse all jemalloc chunks
