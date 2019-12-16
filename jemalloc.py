@@ -153,6 +153,16 @@ class extent:
         self.phn_next = phn_next
         self.phn_lchild = phn_lchild
 
+    def arena_ind():
+        return self.e_bits & 0xfff
+
+    def is_slab():
+        return (self.e_bits & 0x1000) == 0x1000
+
+    # Usable size class index
+    def iszind():
+        return (self.e_bits & 0x3fc0000) >> 18
+
 
 # backend allocator structs
 class arena:
