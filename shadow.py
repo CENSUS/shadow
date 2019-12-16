@@ -274,9 +274,9 @@ def parse(read_content_preview, config_path, do_debug_log=False):
     if jeheap.standalone and jeheap.version == 5:
         parse_extents(jeheap)
     else:
-         parse_chunks(jeheap)
+        parse_chunks(jeheap)
+        parse_all_runs(jeheap, read_content_preview)
 
-    parse_all_runs(jeheap, read_content_preview)
     parse_arenas(jeheap)
     if jeheap.standalone:
         parse_tbin_info(jeheap)
@@ -309,7 +309,8 @@ def parse_general(jeheap):
 
     jeheap.dword_size = dbg.get_dword_size()
 
-    arenas_arr_addr = int_from_sym(['arenas', 'je_arenas'])
+    # May break jemalloc 4 parsing. Must test
+    arenas_arr_addr = dbg.addressof('je_arenas')
 
     jeheap.narenas = int_from_sym(['narenas', 'narenas_total',
                                    'je_narenas_total'])
@@ -430,7 +431,7 @@ def parse_arenas(jeheap):
         if new_arena_addr == 0:
             continue
 
-        new_arena = parse_arena(new_arena_addr, i, jeheap.nbins)
+        new_arena = parse_arena5(new_arena_addr, i, jeheap.nbins)
 
         # Add arena to the list of arenas
         jeheap.arenas.append(new_arena)
@@ -539,17 +540,29 @@ def parse_run(jeheap, hdr_addr, addr, run_hdr, run_size, binind, read_content_pr
 # Parsing functions for jemalloc version 5
 def parse_arena5(address, index, nbins):
 
+    # Parse bins
     bin_size = dbg.sizeof('bin_t')
 
-    bins_addr = address + dbg.offset('arena_t', 'bins')
+    bins_addr = address + dbg.offsetof('arena_t', 'bins')
     bins_mem = dbg.read_bytes(bins_addr, nbins * bin_size)
     bins_mem = [bins_mem[z:z+bin_size]
                 for z in range(0, nbins * bin_size, bin_size)]
 
-    return jemalloc.arena5(address, index, [], [], [])
+    bins = [parse_bin5(bins_addr + bin_size*i, i, bins_mem[i])
+                for i in range(0, nbins)]
 
-def parse_bin5(address, index):
-    return jemalloc.bin5(address, index)
+    return jemalloc.arena5(address, index, bins, [])
+
+def parse_bin5(address, index, data):
+
+    dword_size = dbg.get_dword_size()
+
+    slabcur = dbg.read_struct_member(data, 'bin_t', 'slabcur', dword_size)
+    slabs_nonfull = dbg.read_struct_member(data, 'bin_t', 'slabs_nonfull',
+                                            dword_size)
+    slabs_full = dbg.read_struct_member(data, 'bin_t', 'slabs_full', dword_size)
+
+    return jemalloc.bin5(address, index, slabcur, slabs_nonfull, slabs_full)
 
 
 # parse the metadata of all runs and their regions
