@@ -13,6 +13,7 @@ class jemalloc:
         self.nbins = None
         self.narenas = None
         self.arenas = []
+        self.arenas_addr = []
         self.tcaches = {}
 
         # small class size information

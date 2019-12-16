@@ -25,7 +25,6 @@ VERSION = 'v2.0'
 
 # globals
 jeheap = None
-arenas_addr = []
 
 # firefox globals
 xul_version = ''
@@ -301,7 +300,6 @@ def parse(read_content_preview, config_path, do_debug_log=False):
 
 
 def parse_general(jeheap):
-    global arenas_addr
 
     debug_log("parse_general()")
 
@@ -315,7 +313,7 @@ def parse_general(jeheap):
     jeheap.narenas = int_from_sym(['narenas', 'narenas_total',
                                    'je_narenas_total'])
 
-    arenas_addr = dbg.read_dwords(arenas_arr_addr, jeheap.narenas)
+    jeheap.arenas_addr = dbg.read_dwords(arenas_arr_addr, jeheap.narenas)
 
     if jeheap.standalone:
         jeheap.version = jemalloc_major_version()
@@ -402,7 +400,7 @@ def parse_general(jeheap):
 
     # firefox: parse the bins of arena[0]
     else:
-        info_addr = arenas_addr[0] + dbg.offsetof('arena_t', 'bins')
+        info_addr = jeheap.arenas_addr[0] + dbg.offsetof('arena_t', 'bins')
         info_size = dbg.sizeof('arena_bin_t')
         info_struct = "arena_bin_t"
         info_class = jeheap.arena_bin_info
@@ -424,10 +422,9 @@ def parse_general(jeheap):
 
 
 def parse_arenas(jeheap):
-    global arenas_addr
 
     for i in range(0, jeheap.narenas):
-        new_arena_addr = arenas_addr[i]
+        new_arena_addr = jeheap.arenas_addr[i]
         if new_arena_addr == 0:
             continue
 
@@ -906,9 +903,8 @@ def parse_chunks(jeheap):
                     except:
                         arena_addr = 0
 
-                global arenas_addr
                 exists = False
-                if arena_addr in arenas_addr:
+                if arena_addr in jeheap.arenas_addr:
                     exists = True
 
                 # this fixes the weird case where a non page aligned
