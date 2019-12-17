@@ -774,12 +774,11 @@ def parse_all_runs(jeheap, read_content_preview):
 
 
 def parse_extents(jeheap):
+    # Currently a no-op
     debug_log('parse_extents()')
 
     rtree_addr = int(str(dbg.addressof('je_extents_rtree')).split()[0], 16)
     rtree_mem = dbg.read_bytes(rtree_addr, dbg.sizeof("rtree_t"))
-
-    raise NotImplementedError('Must implement parsing of extent tree')
 
 
 def parse_extent(addr):
@@ -993,13 +992,9 @@ def parse_tcaches(jeheap):
     for tbinfo in jeheap.tbin_info:
         max_cached += tbinfo.ncached_max
 
-    tcache_size = dbg.offsetof("tcache_t", "tbins") + \
-                  (dbg.sizeof("tcache_bin_t") * nhbins) + \
-                  (max_cached * dword_size)
-    tcache_size = size2bin_size(jeheap, tcache_size)
+    # This breaks for jemalloc v4 where tcache_t has variable size
+    tcache_size = dbg.sizeof("tcache_t")
 
-
-    # tcache_size = 0x1C00
     arenas_addr = [arena.addr for arena in jeheap.arenas]
 
     # g_thread_list points to the first pthread_internal_t struct
@@ -1144,6 +1139,63 @@ def parse_tcache(addr, mem, tid):
 
 
     return jemalloc.tcache(addr, tid, tbins)
+
+
+def parse_tcache5(addr, mem, tid):
+
+    small_bins_off = dbg.offsetof("tcache_t", "bins_small")
+    large_bins_off = dbg.offsetof("tcache_t", "bins_large")
+    link_off = dbg.offsetof("tcache_t", "link")
+    tbin_size = dbg.sizeof("cache_bin_t")
+    lg_fill_div = dbg.read_struct_member(mem, "tcache_t", "lg_fill_div",
+                                            jeheap.nbins)
+
+    tbins = []
+    tbins_small_mem = mem[small_tbins_off:link_off]
+
+    # This section only parses the small bins (i.e. bins_small)
+    off = 0
+    for i in range(0, jeheap.nbins):
+        tbin_mem = tbins_small_mem[off:off+tbin_size]
+        tbin_addr = addr + tbins_off + off
+
+        ncached_max = jeheap.tbin_info[i].ncached_max
+
+        tbin = parse_cache_bin(tbin_addr, i, tbin_mem, ncached_max)
+
+        tbins.append(tbin)
+        off += tbin_size
+
+
+    return jemalloc.tcache(addr, tid, tbins)
+
+
+def parse_cache_bin(addr, index, mem, ncached_max):
+    dword_size = dbg.get_dword_size()
+    int_size = dbg.int_size()
+
+    avail = dbg.read_struct_member(tbin_mem, "cache_bin_t",
+                                       "avail", dword_size)
+    ncached = dbg.read_struct_member(tbin_mem, "cache_bin_t",
+                                         "ncached", int_size)
+    low_water = dbg.read_struct_member(tbin_mem, "cache_bin_t",
+                                             "low_water", int_size)
+
+    avail_off = avail - addr - (ncached_max * dword_size)
+
+    stack_size = ncached_max * dword_size
+    stack_mem = mem[avail_off:avail_off+stack_size]
+
+    stack = []
+    cur_addr_off = 0
+    while cur_addr_off < len(stack_mem):
+        region_addr = dbg.dword_from_buf(stack_mem, cur_addr_off)
+        stack.append(region_addr)
+        cur_addr_off += dword_size
+
+    stack = stack[ncached_max - ncached:]
+
+    return jemalloc.tcache_bin(addr, index, low_water, None, ncached, avail, stack)
 
 
 def jefreecheck_search(ptr):
