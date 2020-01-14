@@ -269,6 +269,8 @@ def parse(read_content_preview, config_path, do_debug_log=False):
 
     jeheap = jemalloc.jemalloc()
     parse_general(jeheap)
+    parse_get_nbins(jeheap)
+    parse_bin_info(jeheap)
 
     if jeheap.standalone and jeheap.version == 4:
         parse_chunks(jeheap)
@@ -325,7 +327,11 @@ def parse_general(jeheap):
     else:
         jeheap.chunk_size = 1 << 20
 
-    # number of bins
+    for name, range_list in dbg.modules_dict().items():
+        jeheap.modules_dict[name] = range_list
+
+
+def parse_get_nbins(jeheap):
     # first attempt
     jeheap.nbins = int_from_sym(['nbins'])
 
@@ -387,6 +393,8 @@ def parse_general(jeheap):
                 else:
                     jeheap.nbins = 35
 
+
+def parse_bin_info(jeheap):
     # standalone: parse the global je_arena_bin_info array
     if jeheap.standalone:
         if jeheap.version == 4:
@@ -418,9 +426,6 @@ def parse_general(jeheap):
     for buf in bin_info_mem:
         info_unit = info_class(buf, info_struct)
         jeheap.bin_info.append(info_unit)
-
-    for name, range_list in dbg.modules_dict().items():
-        jeheap.modules_dict[name] = range_list
 
 
 def parse_arenas(jeheap):
