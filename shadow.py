@@ -338,7 +338,7 @@ def parse_general(jeheap):
             jeheap.nbins = jeheap.ntbins + jeheap.nsbins + jeheap.nqbins
 
     # third attempt
-    if dbg_engine == 'gdb':
+    if not jeheap.nbins and dbg_engine == 'gdb':
         try:
             jeheap.nbins = int(dbg.execute('p __mallinfo_nbins()').split()[2])
             print("[shadow] Got number of bins from __mallinfo_nbins")
