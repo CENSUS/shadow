@@ -8,6 +8,7 @@ class jemalloc:
         self.chunk_size = None
         self.chunks = []
         self.runs = {}
+        self.extents = {}
 
         # memory management
         self.nbins = None
@@ -15,6 +16,9 @@ class jemalloc:
         self.arenas = []
         self.arenas_addr = []
         self.tcaches = {}
+
+        # all size classes
+        self.sz_index2size_tab = []
 
         # small class size information
         self.bin_info = []
@@ -143,26 +147,39 @@ class region:
 
 # memory organization structs for jemalloc version 5
 class extent:
-    def __init__(self, addr, e_addr, e_bits, qre_next, qre_prev,
+    def __init__(self, addr, e_bits, e_addr, e_size_esn,
+                 qre_next, qre_prev,
                  phn_prev, phn_next, phn_lchild):
         self.addr = addr
         self.e_addr = e_addr
         self.e_bits = e_bits
+        # The next two fields are stored in a union
+        self.e_size_esn = e_size_esn
+        self.e_bsize = e_size_esn
         self.qre_next = qre_next
         self.qre_prev = qre_prev
         self.phn_prev = phn_prev
         self.phn_next = phn_next
         self.phn_lchild = phn_lchild
 
-    def arena_ind():
+    def arena_ind(self):
         return self.e_bits & 0xfff
 
-    def is_slab():
+    def is_slab(self):
         return (self.e_bits & 0x1000) == 0x1000
 
+    def nfree(self):
+        return (self.e_bits & 0xffc000000) >> 26
+
     # Usable size class index
-    def iszind():
+    def szind(self):
         return (self.e_bits & 0x3fc0000) >> 18
+
+    def size(self):
+        return self.e_size_esn >> 12
+
+    def esn(self):
+        return self.e_size_esn & 0xfff
 
 
 # backend allocator structs
@@ -184,9 +201,10 @@ class arena_bin:
 
 # backend allocator struct for jemalloc version 5
 class arena5:
-    def __init__(self, addr, index, bins, tids):
+    def __init__(self, addr, index, large, bins, tids):
         self.addr = addr
         self.index = index
+        self.large = large
         self.bins = bins
         self.tids = tids
 

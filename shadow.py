@@ -270,13 +270,15 @@ def parse(read_content_preview, config_path, do_debug_log=False):
     jeheap = jemalloc.jemalloc()
     parse_general(jeheap)
 
-    if jeheap.standalone and jeheap.version == 5:
-        parse_extents(jeheap)
-    else:
+    if jeheap.standalone and jeheap.version == 4:
         parse_chunks(jeheap)
         parse_all_runs(jeheap, read_content_preview)
 
     parse_arenas(jeheap)
+
+    if jeheap.standalone and jeheap.version == 5:
+        parse_extents(jeheap)
+
     if jeheap.standalone:
         parse_tbin_info(jeheap)
         parse_tcaches(jeheap)
@@ -535,12 +537,15 @@ def parse_run(jeheap, hdr_addr, addr, run_hdr, run_size, binind, read_content_pr
 
 
 # Parsing functions for jemalloc version 5
-def parse_arena5(address, index, nbins):
+def parse_arena5(addr, index, nbins):
+
+    # Parse pointer to head of large extents list
+    large = dbg.read_dword(addr + dbg.offsetof('arena_t', 'large'))
 
     # Parse bins
     bin_size = dbg.sizeof('bin_t')
 
-    bins_addr = address + dbg.offsetof('arena_t', 'bins')
+    bins_addr = addr + dbg.offsetof('arena_t', 'bins')
     bins_mem = dbg.read_bytes(bins_addr, nbins * bin_size)
     bins_mem = [bins_mem[z:z+bin_size]
                 for z in range(0, nbins * bin_size, bin_size)]
@@ -548,7 +553,8 @@ def parse_arena5(address, index, nbins):
     bins = [parse_bin5(bins_addr + bin_size*i, i, bins_mem[i])
                 for i in range(0, nbins)]
 
-    return jemalloc.arena5(address, index, bins, [])
+    return jemalloc.arena5(addr, index, large, bins, [])
+
 
 def parse_bin5(address, index, data):
 
@@ -774,11 +780,56 @@ def parse_all_runs(jeheap, read_content_preview):
 
 
 def parse_extents(jeheap):
-    # Currently a no-op
     debug_log('parse_extents()')
 
-    rtree_addr = int(str(dbg.addressof('je_extents_rtree')).split()[0], 16)
-    rtree_mem = dbg.read_bytes(rtree_addr, dbg.sizeof("rtree_t"))
+    # We should have pointers to some extents from :
+    # 1. List of large allocations for each arena.
+    # 2. Current slab for each bin.
+    # 3. Heap of non-full slabs for each bin.
+    # 4. List of full slabs for each bin.
+    #
+    # Now parse them and travel the data structures to find more.
+    #
+    # TODO: We cannot find all large extents this way. Need to improve extent
+    #       discovery.
+    for arena in jeheap.arenas:
+
+        parse_extent_list(jeheap, arena.large)          # 1
+
+        for b in arena.bins:
+            if b.slabcur != 0 and b.slabcur not in jeheap.extents:
+                slabcur = parse_extent(b.slabcur)       # 2
+                jeheap.extents[b.slabcur] = slabcur
+            parse_extent_heap(jeheap, b.slabs_nonfull)  # 3
+            parse_extent_list(jeheap, b.slabs_full)     # 4
+
+
+
+
+def parse_extent_list(jeheap, extent_ptr):
+
+    if extent_ptr == 0 or extent_ptr in jeheap.extents:
+        return
+
+    extent_obj = parse_extent(extent_ptr)
+    jeheap.extents[extent_ptr] = extent_obj
+
+    # Sloppy. There must be a better way.
+    parse_extent_list(jeheap, extent_obj.qre_next)
+    parse_extent_list(jeheap, extent_obj.qre_prev)
+
+
+def parse_extent_heap(jeheap, extent_ptr):
+
+    if extent_ptr == 0 or extent_ptr in jeheap.extents:
+        return
+
+    extent_obj = parse_extent(extent_ptr)
+    jeheap.extents[extent_ptr] = extent_obj
+
+    # Depth-first parsing
+    parse_extent_heap(jeheap, extent_obj.phn_lchild)
+    parse_extent_heap(jeheap, extent_obj.phn_next)
 
 
 def parse_extent(addr):
@@ -787,8 +838,9 @@ def parse_extent(addr):
 
     e_bits = dbg.read_struct_member(mem, 'extent_t', 'e_bits', 8)
     e_addr = dbg.read_struct_member(mem, 'extent_t', 'e_addr', dword_size)
+    e_size_esn = dbg.read_struct_member(mem, 'extent_t', 'e_bsize', dword_size)
 
-    # This code attempts to read the membbers of two anonymous structs. It will
+    # This code attempts to read the members of two anonymous structs. It will
     # break if any change happens to these structs.
     link_off = dbg.offsetof('extent_t', 'ql_link')
     qre_next   = dbg.dword_from_buf(mem, link_off)
@@ -797,7 +849,8 @@ def parse_extent(addr):
     phn_next   = dbg.dword_from_buf(mem, link_off + 3 * dword_size)
     phn_lchild = dbg.dword_from_buf(mem, link_off + 4 * dword_size)
 
-    return jemalloc.extent(addr, e_bits, e_addr, qre_prev, qre_next,
+    return jemalloc.extent(addr, e_bits, e_addr, e_size_esn,
+                           qre_prev, qre_next,
                            phn_prev, phn_next, phn_lchild)
 
 
@@ -1970,6 +2023,42 @@ def dump_address(addr):
         table.append(("run", hex(run.addr), hex(run.size)))
         if region:
             table.append(("region", hex(region.addr), hex(region.size)))
+
+    print(ascii_table(table))
+
+
+# jemalloc version 5 specific dumping
+
+def dump_extents():
+    global jeheap
+
+    if dbg_engine == "pykd":
+        path = os.path.join(storage_path, "jeheap")
+        jeheap = load_jeheap(path)
+
+    if not jeheap:
+        print("[shadow] Parsed heap object not found, use jeparse.")
+        return
+
+    table = [('address', 'metadata-address', 'arena', 'total size',
+             'region size', 'nfree', 'is slab')]
+
+    for addr, extent in jeheap.extents.iteritems():
+        arena_ind = extent.arena_ind()
+        arena = arena_ind if arena_ind != 0xfff else 'Unasociated'
+        if extent.is_slab():
+            bin_info = jeheap.bin_info[extent.szind()]
+            size = hex(bin_info.slab_size)
+            reg_size = hex(bin_info.reg_size)
+            nfree = extent.nfree()
+        else:
+            # TODO Find the size of non-slab extents
+            size = '?'
+            reg_size = '-'
+            nfree = '-'
+
+        table.append((hex(extent.e_addr), hex(extent.addr), arena, size,
+                     reg_size, nfree, extent.is_slab()))
 
     print(ascii_table(table))
 
