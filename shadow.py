@@ -2055,7 +2055,8 @@ def dump_extents():
     table = [('address', 'metadata-address', 'arena', 'total size',
              'region size', 'nfree', 'is slab')]
 
-    for addr, extent in jeheap.extents.iteritems():
+    for extent_addr in sorted(jeheap.extents.keys()):
+        extent = jeheap.extents[extent_addr]
         arena_ind = extent.arena_ind()
         arena = arena_ind if arena_ind != 0xfff else 'Unasociated'
         if extent.is_slab():
