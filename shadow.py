@@ -279,6 +279,7 @@ def parse(read_content_preview, config_path, do_debug_log=False):
     parse_arenas(jeheap)
 
     if jeheap.standalone and jeheap.version == 5:
+        parse_sz_tab(jeheap)
         parse_extents(jeheap)
 
     if jeheap.standalone:
@@ -426,6 +427,12 @@ def parse_bin_info(jeheap):
     for buf in bin_info_mem:
         info_unit = info_class(buf, info_struct)
         jeheap.bin_info.append(info_unit)
+
+
+def parse_sz_tab(jeheap):
+    tab_addr = dbg.addressof('je_sz_index2size_tab')
+    jeheap.nsizes = 232 # true on 64-bit, must check 32-bit too
+    jeheap.sz_tab = dbg.read_dwords(tab_addr, jeheap.nsizes)
 
 
 def parse_arenas(jeheap):
@@ -2057,13 +2064,31 @@ def dump_extents():
             reg_size = hex(bin_info.reg_size)
             nfree = extent.nfree()
         else:
-            # TODO Find the size of non-slab extents
-            size = '?'
+            size = hex(jeheap.sz_tab[extent.szind()])
             reg_size = '-'
             nfree = '-'
 
         table.append((hex(extent.e_addr), hex(extent.addr), arena, size,
                      reg_size, nfree, extent.is_slab()))
+
+    print(ascii_table(table))
+
+
+def dump_sz_tab():
+    global jeheap
+
+    if dbg_engine == "pykd":
+        path = os.path.join(storage_path, "jeheap")
+        jeheap = load_jeheap(path)
+
+    if not jeheap:
+        print("[shadow] Parsed heap object not found, use jeparse.")
+        return
+
+    table = [('index', 'size')]
+
+    for i in range(len(jeheap.sz_tab)):
+        table.append((i, hex(jeheap.sz_tab[i])))
 
     print(ascii_table(table))
 

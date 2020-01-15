@@ -18,6 +18,7 @@ class jemalloc:
         self.tcaches = {}
 
         # all size classes
+        self.nsizes = None
         self.sz_index2size_tab = []
 
         # small class size information
