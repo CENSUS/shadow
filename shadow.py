@@ -545,6 +545,7 @@ def parse_all_runs(jeheap, read_content_preview):
                           + dbg.offsetof('extent_node_t', 'en_arena')
         map_misc_offset = dbg.to_int(dbg.get_value('je_map_misc_offset'))
         arena_run_bin_off = None
+        map_bias = int_from_sym(['je_map_bias'])
 
     # the arena_run_t header is stored at the hdr_addr of each run in
     # the firefox version
@@ -555,14 +556,10 @@ def parse_all_runs(jeheap, read_content_preview):
         chunk_arena_off = dbg.offsetof('arena_chunk_t', 'arena')
         map_misc_offset = None
         arena_run_bin_off = dbg.offsetof('arena_run_t', 'bin')
+        map_bias = 0
 
     arena_bin_size = dbg.sizeof('arena_bin_t')
     bins_offset = dbg.offsetof('arena_t', 'bins')
-
-    if jeheap.standalone:
-        map_bias = int_from_sym(['je_map_bias'])
-    else:
-        map_bias = 0
 
     chunk_npages = jeheap.chunk_size >> 12
     bitmap_len = (chunk_npages - map_bias) * chunk_map_dwords
@@ -609,16 +606,19 @@ def parse_all_runs(jeheap, read_content_preview):
         for mapelm in bitmap:
             i += 1
             debug_log("    [%04d] mapelm = 0x%x" % (i, mapelm))
-            # small run
-            if mapelm & 0xf == 1:
-                if jeheap.standalone:
+
+            # standalone version
+            if jeheap.standalone:
+                # small run
+                if mapelm & 0xf == 1:
                     debug_log("      small run")
 
                     if android_version == '6':
                         offset = mapelm & ~flags_mask
+                        binind = (mapelm & 0xFF0) >> 4
                     elif android_version == '7' or android_version == '8':
-                        # offset = (mapelm >> 13) << 12
                         offset = (mapelm & ~0x1FFF) >> 1
+                        binind = (mapelm & 0x1FE0) >> 5
 
                     debug_log("      offset = 0x%x" % offset)
 
@@ -626,37 +626,50 @@ def parse_all_runs(jeheap, read_content_preview):
                     if offset != 0:
                         continue
 
-                    map_misc_addr = chunk.addr + map_misc_offset
-
-                    cur_arena_chunk_map_misc = map_misc_addr + \
-                                               i * dbg.sizeof('arena_chunk_map_misc_t')
-
-                    hdr_addr = cur_arena_chunk_map_misc + \
-                               dbg.offsetof('arena_chunk_map_misc_t', 'run')
-                    debug_log("    hdr_addr = 0x%x" % hdr_addr)
-
-                    run_hdr_off = map_misc_offset \
-                                  + i * dbg.sizeof('arena_chunk_map_misc_t') \
-                                  + dbg.offsetof('arena_chunk_map_misc_t', 'run')
-
-                    run_hdr = chunk_mem[run_hdr_off:
-                                        run_hdr_off + dbg.sizeof("arena_run_t")]
-
-
-
-                    # decode the bin index
-                    if android_version == '6':
-                        binind = (mapelm & 0xFF0) >> 4
-                    elif android_version== '7' or android_version == '8':
-                        binind = (mapelm & 0x1FE0) >> 5
                     debug_log("      binind = 0x%x" % binind)
-
 
                     size = jeheap.bin_info[binind].run_size
                     debug_log("      size = 0x%x" % size)
 
-                # firefox
+                # large run
+                elif mapelm & 0xf == 3:
+                    debug_log("      large run")
+
+                    if android_version == '6':
+                        size = mapelm & ~flags_mask
+                    elif android_version == '7' or android_version == '8':
+                        size = (mapelm & ~0x1FFF) >> 1
+
+                    binind = 0xff
+                    debug_log("      size = 0x%x" % size)
+
+                # unallocated run
                 else:
+                    debug_log("      unallocated run")
+                    continue
+
+                map_misc_addr = chunk.addr + map_misc_offset
+
+                cur_arena_chunk_map_misc = map_misc_addr + \
+                                           i * dbg.sizeof('arena_chunk_map_misc_t')
+
+                hdr_addr = cur_arena_chunk_map_misc + \
+                           dbg.offsetof('arena_chunk_map_misc_t', 'run')
+
+                debug_log("      run_hdr = 0x%x" % hdr_addr)
+
+                run_hdr_off = map_misc_offset \
+                              + i * dbg.sizeof('arena_chunk_map_misc_t') \
+                              + dbg.offsetof('arena_chunk_map_misc_t', 'run')
+
+                run_hdr = chunk_mem[run_hdr_off:
+                                    run_hdr_off + dbg.sizeof("arena_run_t")]
+                addr =  chunk.addr + (i + map_bias) * dbg.get_page_size()
+
+            # Firefox
+            else:
+                # small run
+                if mapelm & 0xf == 1:
                     hdr_addr = mapelm & ~flags_mask
                     off = hdr_addr - chunk.addr
 
@@ -677,59 +690,26 @@ def parse_all_runs(jeheap, read_content_preview):
                     run_hdr = chunk_mem[off:
                                         off + run_hdr_sz]
 
-            # large run
-            elif mapelm & 0xf == 3:
-                if jeheap.standalone:
-                    debug_log("      large run")
-                    map_misc_addr = chunk.addr + map_misc_offset
-
-                    cur_arena_chunk_map_misc = map_misc_addr + \
-                                               i * dbg.sizeof('arena_chunk_map_misc_t')
-
-                    hdr_addr = cur_arena_chunk_map_misc + \
-                               dbg.offsetof('arena_chunk_map_misc_t', 'run')
-
-                    debug_log("      run_hdr = 0x%x" % hdr_addr)
-
-                    run_hdr_off = map_misc_offset \
-                                  + i * dbg.sizeof('arena_chunk_map_misc_t') \
-                                  + dbg.offsetof('arena_chunk_map_misc_t', 'run')
-
-                    run_hdr = chunk_mem[run_hdr_off:
-                                        run_hdr_off + dbg.sizeof("arena_run_t")]
-
-
-                    if android_version == '6':
-                        size = mapelm & ~flags_mask
-                    elif android_version == '7' or android_version == '8':
-                        size = (mapelm & ~0x1FFF) >> 1
-                    debug_log("      size = 0x%x" % size)
-
-                # firefox
-                else:
+                # large run
+                elif mapelm & 0xf == 3:
                     hdr_addr = chunk.addr + i * dbg.get_page_size()
                     off = hdr_addr - chunk.addr
                     run_hdr = chunk_mem[off:
                                         off + dbg.sizeof("arena_run_t")]
 
                     size = mapelm & ~flags_mask
+                    binind = 0xff
 
-                binind = 0xff
+                # unallocated run
+                else:
+                    debug_log("      unallocated page")
+                    continue
 
-            # unallocated run
-            else:
-                debug_log("      unallocated page")
-                continue
+                addr = hdr_addr
 
             if hdr_addr == 0 or size == 0:
                 debug_log("      hdr_addr or size is 0, skipping")
                 continue
-
-            if jeheap.standalone:
-                addr =  chunk.addr + (i + map_bias) * dbg.get_page_size()
-            # firefox
-            else:
-                addr = hdr_addr
 
             debug_log("      addr = 0x%x" % addr)
             jeheap.runs[str(hdr_addr)] = parse_run(jeheap, hdr_addr, addr, run_hdr,
