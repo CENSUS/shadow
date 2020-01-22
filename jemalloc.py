@@ -96,6 +96,7 @@ class run:
         self.regs_mask = regs_mask # v2 name
         self.bitmap = regs_mask    # v3 name
         self.regions = regions
+        self.unallocated = False
 
 
 class region:

@@ -605,6 +605,7 @@ def parse_all_runs(jeheap, read_content_preview):
         i = -1
         for mapelm in bitmap:
             i += 1
+            unallocated = False
             debug_log("    [%04d] mapelm = 0x%x" % (i, mapelm))
 
             # standalone version
@@ -646,7 +647,15 @@ def parse_all_runs(jeheap, read_content_preview):
                 # unallocated run
                 else:
                     debug_log("      unallocated run")
-                    continue
+
+                    if android_version == '6':
+                        size = mapelm & ~flags_mask
+                    elif android_version == '7' or android_version == '8':
+                        size = (mapelm & ~0x1FFF) >> 1
+
+                    unallocated = True
+                    binind = 0xff
+                    debug_log("      size = 0x%x" % size)
 
                 map_misc_addr = chunk.addr + map_misc_offset
 
@@ -710,10 +719,12 @@ def parse_all_runs(jeheap, read_content_preview):
             if hdr_addr == 0 or size == 0:
                 debug_log("      hdr_addr or size is 0, skipping")
                 continue
-
             debug_log("      addr = 0x%x" % addr)
-            jeheap.runs[str(hdr_addr)] = parse_run(jeheap, hdr_addr, addr, run_hdr,
-                                                   size, binind, read_content_preview)
+
+            new_run = parse_run(jeheap, hdr_addr, addr, run_hdr, size, binind,
+                                read_content_preview)
+            new_run.unallocated = unallocated
+            jeheap.runs[str(hdr_addr)] = new_run
 
             chunk.runs.append(hdr_addr)
 
@@ -1493,27 +1504,39 @@ def dump_runs(dump_current_runs=False, size_class=0):
         for i in range(0, len(jeheap.arenas)):
             print("* arena[%d]" % i)
             print("")
-            table = [("region size", "run address", "run size", "usage")]
+            table = [("region size", "run address", "run size", "usage", "allocated")]
 
             for j in range(0, len(jeheap.arenas[i].bins)):
                 run = jeheap.arenas[i].bins[j].runcur
                 if run is None:
                     run_addr = "-"
                     run_size = "-"
-                    run_usage = '-'
+                    run_usage = "-"
+                    run_alloc = "-"
+
+                elif run.unallocated:
+                    run_addr = hex(run.addr)
+                    run_size = hex(jeheap.bin_info[j].run_size)
+                    no_free = "-"
+                    no_regions = "-"
+                    run_usage = "-"
+                    run_alloc = "false"
+
                 else:
                     run_addr = hex(run.addr)
                     run_size = hex(jeheap.bin_info[j].run_size)
                     no_free = run.nfree
                     no_regions = jeheap.bin_info[j].nregs
                     run_usage = "%d/%d" % (no_regions - no_free, no_regions)
+                    run_alloc = "true"
 
                 reg_size = hex(jeheap.bin_info[j].reg_size)
                 if size_class == 0 or size_class == jeheap.bin_info[j].reg_size:
                     table.append((reg_size,
                                   run_addr,
                                   run_size,
-                                  run_usage))
+                                  run_usage,
+                                  run_alloc))
 
             print(ascii_table(table))
 
@@ -1527,28 +1550,37 @@ def dump_runs(dump_current_runs=False, size_class=0):
 
             i += 1
             if size_class == 0:
+                # unallocated run
+                if run.unallocated:
+                    table.append([i,
+                                  hex(run.addr),
+                                  hex(run.size),
+                                  "-", "-", "-", "unallocated"])
+
                 # large run
-                if run.binind in [0xff, 0x1fe0]:
-                        table.append([i,
-                                      hex(run.addr),
-                                      hex(run.size),
-                                      "-", "-", "-"])
+                elif run.binind in [0xff, 0x1fe0]:
+                    table.append([i,
+                                  hex(run.addr),
+                                  hex(run.size),
+                                  "-", "-", "-", "large"])
 
                 # small run
                 else:
-                        table.append([i,
-                                      hex(run.addr),
-                                      hex(run.size),
-                                      hex(jeheap.bin_info[run.binind].reg_size),
-                                      jeheap.bin_info[run.binind].nregs,
-                                      run.nfree])
+                    table.append([i,
+                                  hex(run.addr),
+                                  hex(run.size),
+                                  hex(jeheap.bin_info[run.binind].reg_size),
+                                  jeheap.bin_info[run.binind].nregs,
+                                  run.nfree,
+                                  "small"])
             elif not run.binind in [0xff, 0x1fe0] and size_class == jeheap.bin_info[run.binind].reg_size:
                 table.append([i,
-                                hex(run.addr),
-                                hex(run.size),
-                                hex(jeheap.bin_info[run.binind].reg_size),
-                                jeheap.bin_info[run.binind].nregs,
-                                run.nfree])
+                              hex(run.addr),
+                              hex(run.size),
+                              hex(jeheap.bin_info[run.binind].reg_size),
+                              jeheap.bin_info[run.binind].nregs,
+                              run.nfree,
+                              "large"])
 
         table = sorted(table, key=lambda x: x[1])
 
@@ -1557,7 +1589,7 @@ def dump_runs(dump_current_runs=False, size_class=0):
             line[0] = i
             i += 1
 
-        table = [("*", "run_addr", "run_size", "region_size", "no_regions", "no_free")] + table
+        table = [("*", "run_addr", "run_size", "region_size", "no_regions", "no_free", "type")] + table
         print(ascii_table(table))
 
 
