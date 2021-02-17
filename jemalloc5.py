@@ -72,6 +72,8 @@ class jemalloc:
                 raise Exception("Invalid jeheap.txt file")
 
 
+BIN_INFO_COLUMN_NAMES = ('index', 'region_size', 'slab_size', 'no_regions')
+
 class bin_info:
     '''
     A bin_info_t object. This replaced arena_bin_info_t from jemalloc 4.
@@ -88,6 +90,9 @@ class bin_info:
                                             "nregs", int_size)
         self.slab_size = dbg.read_struct_member(data, struct_name,
                                                "slab_size", dword_size)
+
+    def as_table_row(self, i):
+        return (str(i), hex(self.reg_size), hex(self.slab_size), str(self.nregs))
 
 
 class tbin_info:

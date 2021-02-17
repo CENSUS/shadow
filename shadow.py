@@ -1408,12 +1408,10 @@ def dump_bin_info():
         print("[shadow] Parsed heap object not found, use jeparse.")
         return
 
-    i = 0
-    table = [("index", "region_size", "run_size", "no_regions")]
-    for info in jeheap.bin_info:
-        table.append((i , hex(info.reg_size),
-                      hex(info.run_size), info.nregs))
-        i += 1
+    table = [jemalloc.BIN_INFO_COLUMN_NAMES]
+    for i, info in enumerate(jeheap.bin_info):
+        table.append(info.as_table_row(i))
+
     print(ascii_table(table))
 
 

@@ -71,6 +71,8 @@ class jemalloc:
                 raise Exception("Invalid jeheap.txt file")
 
 
+BIN_INFO_COLUMN_NAMES = ('index', 'region_size', 'run_size', 'no_regions')
+
 # small size class information
 class arena_bin_info:
     '''
@@ -91,6 +93,8 @@ class arena_bin_info:
         self.reg0_off = dbg.read_struct_member(data, struct_name,
                                                "reg0_offset", int_size)
 
+    def as_table_row(self, i):
+        return (str(i), hex(self.reg_size), hex(self.run_size), str(self.nregs))
 
 class tbin_info:
     def __init__(self, ncached_max):
