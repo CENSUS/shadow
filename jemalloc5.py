@@ -8,6 +8,7 @@ class jemalloc:
         self.chunk_size = None
         self.chunks = []
         self.runs = {}
+        self.extents = {}
 
         # memory management
         self.nbins = None
@@ -71,14 +72,13 @@ class jemalloc:
                 raise Exception("Invalid jeheap.txt file")
 
 
-# small size class information
-class arena_bin_info:
+class bin_info:
     '''
-    An object with information about an arena_bin_t object. In Firefox this
-    information is within the first arena. In Android versions <10, it is in an
-    arena_bin_info_t object.
+    A bin_info_t object. This replaced arena_bin_info_t from jemalloc 4.
     '''
     def __init__(self, data, struct_name):
+        assert struct_name == 'bin_info_t'
+
         int_size = dbg.int_size()
         dword_size = dbg.get_dword_size()
 
@@ -86,10 +86,8 @@ class arena_bin_info:
                                                "reg_size", dword_size)
         self.nregs = dbg.read_struct_member(data, struct_name,
                                             "nregs", int_size)
-        self.run_size = dbg.read_struct_member(data, struct_name,
-                                               "run_size", dword_size)
-        self.reg0_off = dbg.read_struct_member(data, struct_name,
-                                               "reg0_offset", int_size)
+        self.slab_size = dbg.read_struct_member(data, struct_name,
+                                               "slab_size", dword_size)
 
 
 class tbin_info:
@@ -97,90 +95,123 @@ class tbin_info:
         self.ncached_max = ncached_max
 
 
-# memory organization structs
-class chunk:
-    def __init__(self, addr, arena_addr, runs):
+class extent:
+    '''
+    Representation of an extent_t object
+    '''
+    def __init__(self, addr, e_bits, e_addr, e_size_esn,
+                 qre_next, qre_prev,
+                 phn_prev, phn_next, phn_lchild):
         self.addr = addr
-        self.arena_addr = arena_addr
-        self.runs = runs
+        self.e_addr = e_addr
+        self.e_bits = e_bits
+        # The next two fields are stored in a union
+        self.e_size_esn = e_size_esn
+        self.e_bsize = e_size_esn
+        self.qre_next = qre_next
+        self.qre_prev = qre_prev
+        self.phn_prev = phn_prev
+        self.phn_next = phn_next
+        self.phn_lchild = phn_lchild
+
+    def arena_ind(self):
+        return self.e_bits & 0xfff
+
+    def is_slab(self):
+        return (self.e_bits & 0x1000) == 0x1000
+
+    def nfree(self):
+        return (self.e_bits & 0xffc000000) >> 26
+
+    # Usable size class index
+    def szind(self):
+        return (self.e_bits & 0x3fc0000) >> 18
+
+    def size(self):
+        return self.e_size_esn >> 12
+
+    def esn(self):
+        return self.e_size_esn & 0xfff
 
 
-class run:
-    def __init__(self, hdr_addr, addr, size, binind,
-                 nfree, regs_mask, regions):
-        self.hdr_addr = hdr_addr
-        self.addr = addr
-        self.size = size
-        self.binind = binind
-        self.nfree = nfree
-        self.regs_mask = regs_mask # v2 name
-        self.bitmap = regs_mask    # v3 name
-        self.regions = regions
+def parse_extent(addr):
+    dword_size = dbg.get_dword_size()
+    mem = dbg.read_bytes(addr, dbg.sizeof('extent_t'))
+
+    e_bits = dbg.read_struct_member(mem, 'extent_t', 'e_bits', 8)
+    e_addr = dbg.read_struct_member(mem, 'extent_t', 'e_addr', dword_size)
+    e_size_esn = dbg.read_struct_member(mem, 'extent_t', 'e_bsize', dword_size)
+
+    # This code attempts to read the members of two anonymous structs. It will
+    # break if any change happens to these structs.
+    link_off = dbg.offsetof('extent_t', 'ql_link')
+    qre_next   = dbg.dword_from_buf(mem, link_off)
+    qre_prev   = dbg.dword_from_buf(mem, link_off + 1 * dword_size)
+    phn_prev   = dbg.dword_from_buf(mem, link_off + 2 * dword_size)
+    phn_next   = dbg.dword_from_buf(mem, link_off + 3 * dword_size)
+    phn_lchild = dbg.dword_from_buf(mem, link_off + 4 * dword_size)
+
+    return extent(addr, e_bits, e_addr, e_size_esn, qre_prev, qre_next,
+                  phn_prev, phn_next, phn_lchild)
 
 
-class region:
-    def __init__(self, index, addr, size, is_free, data, data_map):
-        self.index = index
-        self.addr = addr
-        self.size = size
-        self.is_free = is_free
-        self.data = data
-        self.data_map = data_map
-
-
-# backend allocator structs
 class arena:
-    def __init__(self, addr, index, bins, chunks, tids):
+    '''
+    Representation of an arena_t object
+    '''
+    def __init__(self, addr, index, large, bins, tids):
         self.addr = addr
         self.index = index
+        self.large = large
         self.bins = bins
-        self.chunks = chunks
         self.tids = tids
 
-
 def parse_arena(jeheap, addr, index, nbins):
-    new_arena = arena(addr, index, [], [], [])
 
-    # Read the array of bins
-    bin_size = dbg.sizeof('arena_bin_t')
+    # Parse pointer to head of large extents list
+    large = dbg.read_dword(addr + dbg.offsetof('arena_t', 'large'))
+
+    # Parse bins
+    bin_size = dbg.sizeof('bin_t')
+
     bins_addr = addr + dbg.offsetof('arena_t', 'bins')
     bins_mem = dbg.read_bytes(bins_addr, nbins * bin_size)
     bins_mem = [bins_mem[z:z+bin_size]
-                    for z in range(0, nbins * bin_size, bin_size)]
+                for z in range(0, nbins * bin_size, bin_size)]
 
-    # Now parse each bin
-    for j in range(0, nbins):
-        bin_addr = bins_addr + bin_size * j
-        buf = bins_mem[j]
-        new_arena.bins.append(parse_arena_bin(bin_addr, j, buf))
+    bins = [parse_bin(bins_addr + bin_size*i, i, bins_mem[i])
+                for i in range(0, nbins)]
 
-    return new_arena
+    return arena(addr, index, large, bins, [])
 
 
-class arena_bin:
-    def __init__(self, addr, index, runcur):
+class bin:
+    '''
+    Representation of a bin_t object
+    '''
+    def __init__(self, addr, index, slabcur, slabs_nonfull, slabs_full):
         self.addr = addr
         self.index = index
-        self.runcur = runcur
+        self.slabcur = slabcur
+        self.slabs_nonfull = slabs_nonfull
+        self.slabs_full = slabs_full
 
     def current(self):
-        return self.runcur.hdr_addr
+        return self.slabcur
 
 
-def parse_arena_bin(jeheap, addr, index, data):
+def parse_bin(address, index, data):
+
     dword_size = dbg.get_dword_size()
-    runcur = dbg.read_struct_member(data, "arena_bin_t", "runcur", dword_size)
 
-    # associate run address with run object
-    if runcur == 0:
-        run = None
-    else:
-        run = jeheap.runs[str(runcur)]
+    slabcur = dbg.read_struct_member(data, 'bin_t', 'slabcur', dword_size)
+    slabs_nonfull = dbg.read_struct_member(data, 'bin_t', 'slabs_nonfull',
+                                           dword_size)
+    slabs_full = dbg.read_struct_member(data, 'bin_t', 'slabs_full', dword_size)
 
-    return arena_bin(addr, index, run)
+    return bin(address, index, slabcur, slabs_nonfull, slabs_full)
 
 
-# thread cache structs
 class tcache:
     def __init__(self, addr, tid, tbins):
         self.addr = addr
@@ -200,7 +231,6 @@ class tcache_bin:
         self.stack = stack
 
 
-# address info struct
 class address_info:
     def __init__(self):
         self.addr = None

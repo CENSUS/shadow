@@ -17,7 +17,7 @@ sys.path.append('.')
 
 from dbg import dbg, dbg_engine
 from pthread import pthread_internal, pthread_key_data
-import jemalloc
+import jemalloc5 as jemalloc
 import nursery
 import symbol
 
@@ -442,42 +442,10 @@ def parse_arenas(jeheap):
         if new_arena_addr == 0:
             continue
 
-        new_arena = parse_arena5(new_arena_addr, i, jeheap.nbins)
+        new_arena = jemalloc.parse_arena(jeheap, new_arena_addr, i, jeheap.nbins)
 
         # Add arena to the list of arenas
         jeheap.arenas.append(new_arena)
-
-
-def parse_arena(addr, index, nbins):
-    new_arena = jemalloc.arena(addr, index, [], [], [])
-
-    # Read the array of bins
-    bin_size = dbg.sizeof('arena_bin_t')
-    bins_addr = addr + dbg.offsetof('arena_t', 'bins')
-    bins_mem = dbg.read_bytes(bins_addr, nbins * bin_size)
-    bins_mem = [bins_mem[z:z+bin_size]
-                    for z in range(0, nbins * bin_size, bin_size)]
-
-    # Now parse each bin
-    for j in range(0, nbins):
-        bin_addr = bins_addr + bin_size * j
-        buf = bins_mem[j]
-        new_arena.bins.append(parse_arena_bin(bin_addr, j, buf))
-
-    return new_arena
-
-
-def parse_arena_bin(addr, index, data):
-    dword_size = dbg.get_dword_size()
-    runcur = dbg.read_struct_member(data, "arena_bin_t", "runcur", dword_size)
-
-    # associate run address with run object
-    if runcur == 0:
-        run = None
-    else:
-        run = jeheap.runs[str(runcur)]
-
-    return jemalloc.arena_bin(addr, index, run)
 
 
 def parse_run(jeheap, hdr_addr, addr, run_hdr, run_size, binind, read_content_preview):
@@ -546,38 +514,6 @@ def parse_run(jeheap, hdr_addr, addr, run_hdr, run_size, binind, read_content_pr
 
     return jemalloc.run(hdr_addr, addr, run_size, binind, free_regions,
                         regs_mask, regions)
-
-
-# Parsing functions for jemalloc version 5
-def parse_arena5(addr, index, nbins):
-
-    # Parse pointer to head of large extents list
-    large = dbg.read_dword(addr + dbg.offsetof('arena_t', 'large'))
-
-    # Parse bins
-    bin_size = dbg.sizeof('bin_t')
-
-    bins_addr = addr + dbg.offsetof('arena_t', 'bins')
-    bins_mem = dbg.read_bytes(bins_addr, nbins * bin_size)
-    bins_mem = [bins_mem[z:z+bin_size]
-                for z in range(0, nbins * bin_size, bin_size)]
-
-    bins = [parse_bin5(bins_addr + bin_size*i, i, bins_mem[i])
-                for i in range(0, nbins)]
-
-    return jemalloc.arena5(addr, index, large, bins, [])
-
-
-def parse_bin5(address, index, data):
-
-    dword_size = dbg.get_dword_size()
-
-    slabcur = dbg.read_struct_member(data, 'bin_t', 'slabcur', dword_size)
-    slabs_nonfull = dbg.read_struct_member(data, 'bin_t', 'slabs_nonfull',
-                                            dword_size)
-    slabs_full = dbg.read_struct_member(data, 'bin_t', 'slabs_full', dword_size)
-
-    return jemalloc.bin5(address, index, slabcur, slabs_nonfull, slabs_full)
 
 
 # parse the metadata of all runs and their regions
@@ -810,7 +746,7 @@ def parse_extents(jeheap):
 
         for b in arena.bins:
             if b.slabcur != 0 and b.slabcur not in jeheap.extents:
-                slabcur = parse_extent(b.slabcur)       # 2
+                slabcur = jemalloc.parse_extent(b.slabcur)       # 2
                 jeheap.extents[b.slabcur] = slabcur
             parse_extent_heap(jeheap, b.slabs_nonfull)  # 3
             parse_extent_list(jeheap, b.slabs_full)     # 4
@@ -823,7 +759,7 @@ def parse_extent_list(jeheap, extent_ptr):
     if extent_ptr == 0 or extent_ptr in jeheap.extents:
         return
 
-    extent_obj = parse_extent(extent_ptr)
+    extent_obj = jemalloc.parse_extent(extent_ptr)
     jeheap.extents[extent_ptr] = extent_obj
 
     # Sloppy. There must be a better way.
@@ -836,34 +772,13 @@ def parse_extent_heap(jeheap, extent_ptr):
     if extent_ptr == 0 or extent_ptr in jeheap.extents:
         return
 
-    extent_obj = parse_extent(extent_ptr)
+    extent_obj = jemalloc.parse_extent(extent_ptr)
     jeheap.extents[extent_ptr] = extent_obj
 
     # Depth-first parsing
     parse_extent_heap(jeheap, extent_obj.phn_lchild)
     parse_extent_heap(jeheap, extent_obj.phn_next)
 
-
-def parse_extent(addr):
-    dword_size = dbg.get_dword_size()
-    mem = dbg.read_bytes(addr, dbg.sizeof('extent_t'))
-
-    e_bits = dbg.read_struct_member(mem, 'extent_t', 'e_bits', 8)
-    e_addr = dbg.read_struct_member(mem, 'extent_t', 'e_addr', dword_size)
-    e_size_esn = dbg.read_struct_member(mem, 'extent_t', 'e_bsize', dword_size)
-
-    # This code attempts to read the members of two anonymous structs. It will
-    # break if any change happens to these structs.
-    link_off = dbg.offsetof('extent_t', 'ql_link')
-    qre_next   = dbg.dword_from_buf(mem, link_off)
-    qre_prev   = dbg.dword_from_buf(mem, link_off + 1 * dword_size)
-    phn_prev   = dbg.dword_from_buf(mem, link_off + 2 * dword_size)
-    phn_next   = dbg.dword_from_buf(mem, link_off + 3 * dword_size)
-    phn_lchild = dbg.dword_from_buf(mem, link_off + 4 * dword_size)
-
-    return jemalloc.extent(addr, e_bits, e_addr, e_size_esn,
-                           qre_prev, qre_next,
-                           phn_prev, phn_next, phn_lchild)
 
 
 # parse all jemalloc chunks
@@ -1752,14 +1667,14 @@ def dump_bins():
         return
 
     for arena in jeheap.arenas:
-        table = [("index", "addr", "size", "runcur")]
+        table = [("index", "addr", "size", "current")]
         print("arena @ 0x%x" % arena.addr)
         for jebin in arena.bins:
             size = '-'
             addr = '-'
-            if jebin.runcur:
+            if jebin.current():
                 size = hex(jeheap.bin_info[jebin.index].reg_size)
-                addr = hex(jebin.runcur.hdr_addr)
+                addr = hex(jebin.current())
             table.append((jebin.index,
                           hex(jebin.addr),
                           size,
