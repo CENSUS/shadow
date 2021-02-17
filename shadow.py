@@ -1362,16 +1362,28 @@ def size2binind(jeheap, size):
     return binind
 
 
+def must_have_jeheap(f):
+    '''
+    A function decorator that makes sure that the jeheap object is available
+    before calling its inner function.
+    '''
+    def g():
+        global jeheap
+
+        if dbg_engine == "pykd":
+            path = os.path.join(storage_path, "jeheap")
+            jeheap = load_jeheap(path)
+
+        if not jeheap:
+            print("[shadow] Parsed heap object not found, use jeparse.")
+            return
+
+        f()
+    return g
+
+@must_have_jeheap
 def print_size2binind(size):
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     binind = size2binind(jeheap, size)
 
@@ -1397,16 +1409,9 @@ def dump_all(path=None):
     print('[shadow] Heap snapshot saved at %s' % path)
 
 
+@must_have_jeheap
 def dump_bin_info():
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     table = [jemalloc.BIN_INFO_COLUMN_NAMES]
     for i, info in enumerate(jeheap.bin_info):
@@ -1415,16 +1420,9 @@ def dump_bin_info():
     print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_chunks():
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     table = [("addr", "arena", "no_runs")]
     for chunk in jeheap.chunks:
@@ -1438,17 +1436,9 @@ def dump_chunks():
     print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_chunk(addr):
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
-
 
     chunk = None
     # 1. check if addr is the start of a chunk
@@ -1508,16 +1498,9 @@ def dump_chunk(addr):
     print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_arenas():
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     if jeheap.standalone:
         table = [("index", "address", "bins", "chunks", "threads")]
@@ -1570,16 +1553,9 @@ def dump_arenas():
 
 
 
+@must_have_jeheap
 def dump_runs(dump_current_runs=False, size_class=0):
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     if dump_current_runs:
         for i in range(0, len(jeheap.arenas)):
@@ -1653,16 +1629,9 @@ def dump_runs(dump_current_runs=False, size_class=0):
         print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_bins():
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     for arena in jeheap.arenas:
         table = [("index", "addr", "size", "current")]
@@ -1680,12 +1649,9 @@ def dump_bins():
         print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_tcaches():
     global jeheap
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     table = [("tid", "address", "tbins")]
 
@@ -1705,12 +1671,9 @@ def dump_tcaches():
     print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_tcache(tid, binind, size):
     global jeheap
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     k = str(tid)
     if k not in jeheap.tcaches:
@@ -1765,16 +1728,9 @@ def dump_tcache(tid, binind, size):
     return
 
 
+@must_have_jeheap
 def dump_regions(size_class):
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     runs = []
     for k,v in jeheap.runs.items():
@@ -1809,6 +1765,7 @@ def dump_regions(size_class):
     print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_run(addr, view_maps=False):
     global jeheap
 
@@ -1910,16 +1867,9 @@ def dump_run(addr, view_maps=False):
     print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_address(addr):
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     addr_info = find_address(addr, jeheap)
 
@@ -1954,16 +1904,9 @@ def dump_address(addr):
 
 # jemalloc version 5 specific dumping
 
+@must_have_jeheap
 def dump_extents():
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     table = [('address', 'metadata-address', 'arena', 'total size',
              'region size', 'nfree', 'is slab')]
@@ -1988,16 +1931,9 @@ def dump_extents():
     print(ascii_table(table))
 
 
+@must_have_jeheap
 def dump_sz_tab():
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     table = [('index', 'size')]
 
@@ -2346,16 +2282,9 @@ def search_addr_space(jeheap, search_for):
     return matches
 
 
+@must_have_jeheap
 def search(search_for, size_class, search_current_runs, search_address_space):
     global jeheap
-
-    if dbg_engine == "pykd":
-        path = os.path.join(storage_path, "jeheap")
-        jeheap = load_jeheap(path)
-
-    if not jeheap:
-        print("[shadow] Parsed heap object not found, use jeparse.")
-        return
 
     # no whitespace
     if len(search_for) == 1:
